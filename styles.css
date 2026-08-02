@@ -1329,3 +1329,6 @@ body:has(.alia-home .saved-teams-panel){overflow:hidden!important}
 .saved-team-empty b,.saved-team-empty small{display:block}.saved-team-empty b{font-size:13px}.saved-team-empty small{margin-top:4px;color:#95a2b3;font-size:10px;line-height:1.45}
 .saved-teams-panel.is-empty .saved-teams-list{min-height:94px}
 @media(max-width:390px){.saved-team-empty{min-height:88px;padding:10px 11px}.saved-teams-panel.is-empty .saved-teams-list{min-height:88px}}
+
+/* v0.50.0 cloud foundation */
+.cloud-foundation-status{margin-top:14px;padding:12px 14px;border:1px solid rgba(255,104,169,.35);border-radius:14px;display:flex;justify-content:space-between;gap:12px;font-size:12px}.cloud-foundation-status b{color:#fff}.cloud-foundation-status span{color:#ff7db5}
