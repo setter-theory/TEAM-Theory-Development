@@ -1388,3 +1388,8 @@ body.member-modal-open .bottom-nav{visibility:hidden;pointer-events:none}
 .member-readonly-field{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;background:rgba(255,255,255,.08);color:#fff;cursor:default}
 .member-readonly-field small{font-size:10px;color:#f6a3be;font-weight:700;white-space:nowrap}
 .member-self-edit-note{margin:-2px 0 10px;padding:9px 10px;border:1px solid rgba(244,117,157,.28);border-radius:10px;background:rgba(244,117,157,.08);font-size:11px;line-height:1.55;color:#cbd3e3}
+
+/* v0.51.4 権限制御の統一 */
+.settings-readonly-value{display:flex;align-items:center;justify-content:space-between;min-height:48px;background:rgba(255,255,255,.055);color:rgba(255,255,255,.88);cursor:default;user-select:text}
+.settings-role-lock small{font-size:11px;color:#f4a7c0;font-weight:700;letter-spacing:.02em}
+.settings-permission-note{margin:0 0 14px;padding:12px 14px;border:1px solid rgba(244,117,157,.26);border-radius:14px;background:rgba(244,117,157,.08);color:rgba(255,255,255,.82);font-size:12px;line-height:1.65}

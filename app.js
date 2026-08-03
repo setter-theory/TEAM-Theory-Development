@@ -666,7 +666,7 @@ function welcomeView(){
          <p class="alia-tagline">教わるから、考えるへ。</p>
        </div>
      </div>
-     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.51.3" alt="Alia">
+     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.51.4" alt="Alia">
    </div>
    ${savedTeamsView()}
    <div class="welcome-actions">
@@ -675,7 +675,7 @@ function welcomeView(){
    </div>
    <button class="welcome-utility" onclick="showTopSettingsNotice()"><span class="welcome-utility-icon">⚙</span><span>設定・その他</span><span class="welcome-utility-arrow">›</span></button>
    <div class="alia-support">♥ Aliaがチームの成長をサポートするよ！ ♥</div>
-   <div class="welcome-version">Version 0.51.3</div>
+   <div class="welcome-version">Version 0.51.4</div>
  </main>`;
 }
 function savedTeamsView(){
@@ -701,7 +701,7 @@ function createTeamView(){
      <div class="create-field"><label class="create-label"><span class="create-label-icon shield-icon">✦</span><span>役割</span></label><select id="role" class="input create-input create-select">${roleOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🏐</span><span>ポジション</span></label><select id="position" class="input create-input create-select">${positionOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🎓</span><span>学年</span></label><select id="grade" class="input create-input create-select">${gradeOptions()}</select></div>
-     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.51.3" class="create-alia" alt="Alia"></div>
+     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.51.4" class="create-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions create-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon home-svg">⌂</span><span>トップ</span></button><button class="bottom-action primary-action" onclick="createTeamAccount()"><span>チームを作成する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -716,7 +716,7 @@ function joinTeamView(){
      <div class="join-field"><label class="join-label"><span class="join-label-icon shield-icon">★</span><span>参加時の役割</span></label><div class="input join-input join-role-fixed" aria-readonly="true"><span>選手</span><small>固定</small></div><small class="join-help">安全のため参加時は「選手」で登録されます。監督・コーチ・マネージャーへの変更は、参加後に監督が行います。</small></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🏐</span><span>ポジション</span></label><select id="joinPosition" class="input join-input join-select">${positionOptions()}</select></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🎓</span><span>学年</span></label><select id="joinGrade" class="input join-input join-select">${gradeOptions()}</select></div>
-     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.51.3" class="join-alia" alt="Alia"></div>
+     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.51.4" class="join-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions join-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon">⌂</span><span>トップ</span></button><button class="bottom-action join-action" onclick="joinTeamAccount()"><span>参加する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -1262,7 +1262,7 @@ async function deleteMember(id){
 function menuView(){
  const a=loadAccount();
  return `<section class="menu-page menu-hub-page">
-   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.51.3" alt="Alia"></div>
+   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.51.4" alt="Alia"></div>
    <div class="menu-hub-grid">
      ${menuHubItem('👥','チーム情報','チーム名・学校名・カテゴリー・レベル',"go('teamInfo')",'pink')}
      ${menuHubItem('👤','マイプロフィール','名前・役割・ポジション・学年',"go('myProfile')",'pink')}
@@ -1289,23 +1289,30 @@ function settingsCard(title,subtitle,body){
 }
 function teamInfoView(){
  const a=loadAccount();
- return `<section class="settings-detail-page">${menuBack('チーム情報','TEAM SETTINGS')}
- ${settingsCard('基本情報','チーム全体に反映される情報です。',`
+ const canEdit=a?.isOwner===true;
+ const basicBody=canEdit ? `
    <label class="settings-field"><span>チーム名</span><input id="teamInfoName" class="input" value="${esc(a.teamName)}"></label>
    <label class="settings-field"><span>学校名・団体名</span><input id="teamInfoSchool" class="input" value="${esc(a.schoolName||'')}" placeholder="例：Alia高校"></label>
    <label class="settings-field"><span>カテゴリー</span><select id="teamInfoCategory" class="input">${optionList(CATEGORIES,a.category||'未設定')}</select></label>
    <label class="settings-field"><span>チームレベル</span><select id="teamInfoLevel" class="input">${optionList(TEAM_LEVELS,a.teamLevel||'未設定')}</select></label>
- `)}
- <div class="settings-actions"><button class="btn primary" onclick="saveTeamInfo()">変更を保存</button></div>
- ${settingsCard('チーム管理','削除すると、この端末のチーム情報と履歴が削除されます。',`<button class="settings-danger-row" onclick="confirmTeamReset()"><span>このチームを削除</span><em>›</em></button>`)}
+ ` : `
+   <div class="settings-permission-note">チーム情報の変更は、チームを作成した監督だけが行えます。</div>
+   <label class="settings-field"><span>チーム名</span><div class="input settings-readonly-value">${esc(a.teamName)}</div></label>
+   <label class="settings-field"><span>学校名・団体名</span><div class="input settings-readonly-value">${esc(a.schoolName||'未設定')}</div></label>
+   <label class="settings-field"><span>カテゴリー</span><div class="input settings-readonly-value">${esc(a.category||'未設定')}</div></label>
+   <label class="settings-field"><span>チームレベル</span><div class="input settings-readonly-value">${esc(a.teamLevel||'未設定')}</div></label>
+ `;
+ return `<section class="settings-detail-page">${menuBack('チーム情報','TEAM SETTINGS')}
+ ${settingsCard('基本情報',canEdit?'チーム全体に反映される情報です。':'閲覧専用です。',basicBody)}
+ ${canEdit?`<div class="settings-actions"><button class="btn primary" onclick="saveTeamInfo()">変更を保存</button></div>${settingsCard('チーム管理','削除すると、この端末のチーム情報と履歴が削除されます。',`<button class="settings-danger-row" onclick="confirmTeamReset()"><span>このチームを削除</span><em>›</em></button>`)}`:''}
  </section>`;
 }
 function myProfileView(){
  const a=loadAccount();
  return `<section class="settings-detail-page">${menuBack('マイプロフィール','MY PROFILE')}
- ${settingsCard('あなたの情報','Aliaの提案やメンバー表示に使います。',`
+ ${settingsCard('あなたの情報','名前・ポジション・学年は変更できます。役割は監督が設定します。',`
    <label class="settings-field"><span>名前</span><input id="myProfileName" class="input" value="${esc(a.displayName)}"></label>
-   <label class="settings-field"><span>役割</span><select id="myProfileRole" class="input">${roleOptions(a.role)}</select></label>
+   <label class="settings-field"><span>役割</span><div class="input settings-readonly-value settings-role-lock"><span>${esc(a.role||'選手')}</span><small>監督が設定</small></div></label>
    <label class="settings-field"><span>ポジション</span><select id="myProfilePosition" class="input">${positionOptions(a.position||'未設定')}</select></label>
    <label class="settings-field"><span>学年</span><select id="myProfileGrade" class="input">${gradeOptions(a.grade||'未設定')}</select></label>
  `)}
@@ -1353,28 +1360,60 @@ function helpView(){
 }
 function appInfoView(){
  return `<section class="settings-detail-page">${menuBack('アプリ情報','ABOUT')}
- ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.51.3</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
+ ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.51.4</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
  ${settingsCard('情報','',`<button class="settings-menu-row" onclick="toast('更新履歴は準備中です')"><span><b>更新履歴</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('利用規約は準備中です')"><span><b>利用規約</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('プライバシーポリシーは準備中です')"><span><b>プライバシーポリシー</b></span><em>›</em></button>`)}
  </section>`;
 }
-function saveTeamInfo(){
+async function saveTeamInfo(){
  const a=loadAccount();
- a.teamName=document.getElementById('teamInfoName')?.value.trim()||a.teamName;
- a.schoolName=document.getElementById('teamInfoSchool')?.value.trim()||'';
- a.category=document.getElementById('teamInfoCategory')?.value||'未設定';
- a.teamLevel=document.getElementById('teamInfoLevel')?.value||'未設定';
- saveAccount(a); toast('チーム情報を保存しました'); render();
+ if(!a?.isOwner){toast('チーム情報を変更できるのはチームを作成した監督だけです。');return}
+ const next={...a};
+ next.teamName=document.getElementById('teamInfoName')?.value.trim()||a.teamName;
+ next.schoolName=document.getElementById('teamInfoSchool')?.value.trim()||'';
+ next.category=document.getElementById('teamInfoCategory')?.value||'未設定';
+ next.teamLevel=document.getElementById('teamInfoLevel')?.value||'未設定';
+ try{
+  if(next.cloud){
+   const c=cloudClient();
+   if(!c) throw new Error('クラウド接続を確認できません。');
+   await ensureCloudSession();
+   const result=await c.from('teams').update({name:next.teamName,school_name:next.schoolName,category:next.category,team_level:next.teamLevel}).eq('id',next.teamId).select('id').maybeSingle();
+   if(result.error) throw result.error;
+   if(!result.data) throw new Error('チーム情報の更新権限を確認できません。');
+  }
+  saveAccount(next); toast('チーム情報を保存しました'); render();
+ }catch(error){console.error('saveTeamInfo failed',error);toast(cloudErrorMessage(error))}
+}
+async function saveOwnCloudProfile(member){
+ const c=cloudClient();
+ const a=loadAccount();
+ if(!c||!a?.cloud) throw new Error('クラウド接続を確認できません。');
+ await ensureCloudSession();
+ const result=await c.rpc('update_my_team_profile',{
+  p_team_id:a.teamId,
+  p_display_name:member.displayName,
+  p_position:member.position||'未設定',
+  p_grade:member.grade||'未設定',
+  p_number:member.number||'',
+  p_dominant_hand:member.dominantHand||'未設定'
+ });
+ if(result.error) throw result.error;
+ return Array.isArray(result.data)?result.data[0]:result.data;
 }
 async function saveMyProfile(){
  const a=loadAccount();
  const next={...a};
  next.displayName=document.getElementById('myProfileName')?.value.trim()||a.displayName;
- next.role=document.getElementById('myProfileRole')?.value||a.role;
+ next.role=a.role;
  next.position=document.getElementById('myProfilePosition')?.value||'未設定';
  next.grade=document.getElementById('myProfileGrade')?.value||'未設定';
  const members=loadMembers(); const me=members.find(m=>m.teamId===a.teamId&&m.isCurrent);
  try{
-  if(me){Object.assign(me,{displayName:next.displayName,role:next.role,position:next.position,grade:next.grade});if(a.cloud)await saveCloudMember(me);saveMembers(members)}
+  if(me){
+   Object.assign(me,{displayName:next.displayName,position:next.position,grade:next.grade});
+   if(a.cloud) await saveOwnCloudProfile(me);
+   saveMembers(members);
+  }
   saveAccount(next);toast('プロフィールを保存しました');render();
  }catch(error){console.error('saveMyProfile failed',error);toast(cloudErrorMessage(error))}
 }
@@ -1387,7 +1426,7 @@ function saveDisplaySettings(){
  toast('表示設定を保存しました');
 }
 function exportTeamData(){
- const data={version:'0.51.3',exportedAt:new Date().toISOString(),localStorage:{}};
+ const data={version:'0.51.4',exportedAt:new Date().toISOString(),localStorage:{}};
  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); if(k&&k.startsWith('teamTheory')) data.localStorage[k]=localStorage.getItem(k)}
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`TEAM_Theory_backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); toast('バックアップを書き出しました');
 }
@@ -1643,7 +1682,7 @@ if ('serviceWorker' in navigator) {
     refreshing = true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=0.51.3', { updateViaCache: 'none' })
+  navigator.serviceWorker.register('./sw.js?v=0.51.4', { updateViaCache: 'none' })
     .then(reg => {
       reg.update().catch(()=>{});
       setInterval(() => reg.update().catch(()=>{}), 60 * 1000);
