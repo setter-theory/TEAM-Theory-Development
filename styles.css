@@ -1333,14 +1333,14 @@ body:has(.alia-home .saved-teams-panel){overflow:hidden!important}
 /* v0.50.0 cloud foundation */
 .cloud-foundation-status{margin-top:14px;padding:12px 14px;border:1px solid rgba(255,104,169,.35);border-radius:14px;display:flex;justify-content:space-between;gap:12px;font-size:12px}.cloud-foundation-status b{color:#fff}.cloud-foundation-status span{color:#ff7db5}
 
-/* v0.50.5 cloud member controls */
+/* v0.50.6 cloud member controls */
 .member-toolbar{display:flex;gap:10px;align-items:center;margin:0 0 14px}.member-toolbar .member-add-btn,.member-toolbar .member-refresh-btn{margin:0;flex:1}.member-refresh-btn{white-space:nowrap}
 
 .member-owner-note{margin:-4px 0 10px;color:#f3b5cf;font-size:12px;line-height:1.5}
 .member-modal select:disabled{opacity:.8;cursor:not-allowed}
 
 
-/* v0.50.5 member editor interaction fix */
+/* v0.50.6 member editor interaction fix */
 body.member-modal-open{overflow:hidden}
 body.member-modal-open .bottom-nav{visibility:hidden;pointer-events:none}
 .member-modal-backdrop{pointer-events:auto;touch-action:manipulation}
