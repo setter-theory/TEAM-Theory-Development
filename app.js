@@ -832,6 +832,9 @@ function render(){
   else if(state.view==='displaySettings') app.innerHTML=shell(displaySettingsView(),'menu');
   else if(state.view==='help') app.innerHTML=shell(helpView(),'menu');
   else if(state.view==='appInfo') app.innerHTML=shell(appInfoView(),'menu');
+  else if(state.view==='appChangelog') app.innerHTML=shell(appChangelogView(),'menu');
+  else if(state.view==='termsOfUse') app.innerHTML=shell(termsOfUseView(),'menu');
+  else if(state.view==='privacyPolicy') app.innerHTML=shell(privacyPolicyView(),'menu');
   else app.innerHTML=shell(menuView(),'menu');
 }
 
@@ -873,7 +876,7 @@ function welcomeView(){
          <p class="alia-tagline">教わるから、考えるへ。</p>
        </div>
      </div>
-     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.56.1" alt="Alia">
+     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.56.2" alt="Alia">
    </div>
    ${savedTeamsView()}
    <div class="welcome-actions">
@@ -882,7 +885,7 @@ function welcomeView(){
    </div>
    <button class="welcome-utility" onclick="showTopSettingsNotice()"><span class="welcome-utility-icon">⚙</span><span>設定・その他</span><span class="welcome-utility-arrow">›</span></button>
    <div class="alia-support">♥ Aliaがチームの成長をサポートするよ！ ♥</div>
-   <div class="welcome-version">Version 0.56.1</div>
+   <div class="welcome-version">Version 0.56.2</div>
  </main>`;
 }
 function savedTeamsView(){
@@ -908,7 +911,7 @@ function createTeamView(){
      <div class="create-field"><label class="create-label"><span class="create-label-icon shield-icon">✦</span><span>役割</span></label><select id="role" class="input create-input create-select">${roleOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🏐</span><span>ポジション</span></label><select id="position" class="input create-input create-select">${positionOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🎓</span><span>学年</span></label><select id="grade" class="input create-input create-select">${gradeOptions()}</select></div>
-     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.56.1" class="create-alia" alt="Alia"></div>
+     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.56.2" class="create-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions create-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon home-svg">⌂</span><span>トップ</span></button><button class="bottom-action primary-action" onclick="createTeamAccount()"><span>チームを作成する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -923,7 +926,7 @@ function joinTeamView(){
      <div class="join-field"><label class="join-label"><span class="join-label-icon shield-icon">★</span><span>参加時の役割</span></label><div class="input join-input join-role-fixed" aria-readonly="true"><span>選手</span><small>固定</small></div><small class="join-help">安全のため参加時は「選手」で登録されます。監督・コーチ・マネージャーへの変更は、参加後に監督が行います。</small></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🏐</span><span>ポジション</span></label><select id="joinPosition" class="input join-input join-select">${positionOptions()}</select></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🎓</span><span>学年</span></label><select id="joinGrade" class="input join-input join-select">${gradeOptions()}</select></div>
-     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.56.1" class="join-alia" alt="Alia"></div>
+     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.56.2" class="join-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions join-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon">⌂</span><span>トップ</span></button><button class="bottom-action join-action" onclick="joinTeamAccount()"><span>参加する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -1749,7 +1752,7 @@ async function deleteMember(id){
 function menuView(){
  const a=loadAccount();
  return `<section class="menu-page menu-hub-page">
-   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.56.1" alt="Alia"></div>
+   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.56.2" alt="Alia"></div>
    <div class="menu-hub-grid">
      ${menuHubItem('👥','チーム情報','チーム名・学校名・カテゴリー・レベル',"go('teamInfo')",'pink')}
      ${menuHubItem('👤','マイプロフィール','名前・役割・ポジション・学年',"go('myProfile')",'pink')}
@@ -1768,8 +1771,8 @@ function menuView(){
 function menuHubItem(icon,title,desc,action,tone='pink'){
  return `<button class="menu-hub-card ${tone}" onclick="${action}"><span class="menu-hub-icon">${icon}</span><span class="menu-hub-copy"><b>${title}</b><small>${desc}</small></span><span class="menu-hub-chevron">›</span></button>`;
 }
-function menuBack(title,eyebrow='SETTINGS'){
- return `<div class="settings-page-head"><button class="settings-back" onclick="go('menu')">‹</button><div><small>${eyebrow}</small><h2>${title}</h2></div></div>`;
+function menuBack(title,eyebrow='SETTINGS',backView='menu'){
+ return `<div class="settings-page-head"><button class="settings-back" onclick="go('${backView}')">‹</button><div><small>${eyebrow}</small><h2>${title}</h2></div></div>`;
 }
 function settingsCard(title,subtitle,body){
  return `<section class="settings-section-card"><div class="settings-section-title"><h3>${title}</h3>${subtitle?`<p>${subtitle}</p>`:''}</div>${body}</section>`;
@@ -1859,8 +1862,48 @@ function helpView(){
 }
 function appInfoView(){
  return `<section class="settings-detail-page">${menuBack('アプリ情報','ABOUT')}
- ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.56.1</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
- ${settingsCard('情報','',`<button class="settings-menu-row" onclick="toast('更新履歴は準備中です')"><span><b>更新履歴</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('利用規約は準備中です')"><span><b>利用規約</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('プライバシーポリシーは準備中です')"><span><b>プライバシーポリシー</b></span><em>›</em></button>`)}
+ ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.56.2</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
+ ${settingsCard('情報','',`<button class="settings-menu-row" onclick="go('appChangelog')"><span><b>更新履歴</b></span><em>›</em></button><button class="settings-menu-row" onclick="go('termsOfUse')"><span><b>利用規約</b></span><em>›</em></button><button class="settings-menu-row" onclick="go('privacyPolicy')"><span><b>プライバシーポリシー</b></span><em>›</em></button>`)}
+ ${settingsCard('開発者','',`<div class="developer-card"><small>DEVELOPED BY</small><b>Yuta Kano</b><span>TEAM Theory Project</span><p>© TEAM Theory Project. All rights reserved.</p></div>`)}
+ </section>`;
+}
+function appChangelogView(){
+ return `<section class="settings-detail-page">${menuBack('更新履歴','CHANGELOG','appInfo')}
+ ${settingsCard('バージョン履歴','主な更新内容を掲載しています。',`<div class="legal-document changelog-list">
+   <article><h3>Version 0.56.2</h3><p>アプリ情報に更新履歴・利用規約・プライバシーポリシー・開発者情報を追加しました。</p></article>
+   <article><h3>Version 0.56.1</h3><p>ミーティング履歴の公開範囲を改善し、発議・回答・コメント・ミーティング・メンバー情報のリアルタイム同期を追加しました。</p></article>
+   <article><h3>Version 0.56.0</h3><p>学校ごとにミーティングの公開範囲を切り替えられる設定を追加しました。</p></article>
+   <article><h3>Version 0.55.1</h3><p>Alia設定の反映を改善し、反応しないミーティングアイコンを削除しました。</p></article>
+   <article><h3>Version 0.55.0</h3><p>監督発議の操作ボタンの配置・サイズ・色を統一しました。</p></article>
+   <article><h3>Version 0.50.0以降</h3><p>クラウドチーム、招待コード、メンバー権限、監督発議、ミーティング共有などの基盤を段階的に追加しました。</p></article>
+ </div>`)}
+ </section>`;
+}
+function termsOfUseView(){
+ return `<section class="settings-detail-page">${menuBack('利用規約','TERMS OF USE','appInfo')}
+ ${settingsCard('TEAM Theory 利用規約','TEAM Theoryをご利用いただく際は、以下の内容をご確認ください。',`<div class="legal-document">
+   <h3>1. 利用目的</h3><p>本サービスは、チーム内の円滑なコミュニケーション、情報共有およびミーティング活動を支援する目的で提供します。</p>
+   <h3>2. アカウントと招待コードの管理</h3><p>利用者は、自身の端末、招待コードおよび参加情報を適切に管理してください。招待コードを利用目的と関係のない第三者へ共有しないでください。</p>
+   <h3>3. 禁止事項</h3><ul><li>他人になりすます行為</li><li>他の利用者への誹謗中傷、嫌がらせ、または不利益を与える行為</li><li>権限を不正に利用する行為</li><li>不正アクセス、データの改ざん、サービス運営を妨げる行為</li><li>法令または公序良俗に反する行為</li></ul>
+   <h3>4. チーム管理者の権限</h3><p>チーム管理者は、チーム運営に必要な範囲でメンバーの役割、公開範囲、投稿内容およびチームデータを管理できます。</p>
+   <h3>5. サービスの変更・停止</h3><p>機能の改善、保守または安全確保のため、予告なくサービス内容を変更または一時停止する場合があります。</p>
+   <h3>6. 免責</h3><p>通信環境、端末、外部サービス等により生じた利用不能やデータ表示の遅延について、可能な範囲で改善に努めますが、すべての損害を保証するものではありません。重要な内容は必要に応じて別途保管してください。</p>
+   <h3>7. 規約の変更</h3><p>本規約は、サービス内容の変更等に応じて更新する場合があります。変更後の内容はアプリ内で表示します。</p>
+ </div>`)}
+ </section>`;
+}
+function privacyPolicyView(){
+ return `<section class="settings-detail-page">${menuBack('プライバシーポリシー','PRIVACY POLICY','appInfo')}
+ ${settingsCard('TEAM Theory プライバシーポリシー','サービス提供に必要な範囲で利用者情報を取り扱います。',`<div class="legal-document">
+   <h3>1. 取得する情報</h3><ul><li>名前またはニックネーム</li><li>チーム名、学校名、カテゴリーなどのチーム情報</li><li>役割、学年、ポジション、背番号、利き手などのプロフィール情報</li><li>ミーティング、監督発議、回答、コメントおよびAliaまとめの内容</li><li>サービス利用に必要な識別情報および操作日時</li></ul>
+   <h3>2. 利用目的</h3><ul><li>チーム管理とメンバー間の情報共有</li><li>ミーティング、監督発議、回答およびコメント機能の提供</li><li>端末間でのデータ同期</li><li>不具合対応、安全性の確保およびサービス改善</li></ul>
+   <h3>3. データの保存</h3><p>クラウド共有に必要な情報はSupabaseを利用して保存します。端末内には、表示設定や一部の復旧用データが保存される場合があります。</p>
+   <h3>4. 第三者提供</h3><p>法令に基づく場合を除き、本人の同意なく利用者情報を第三者へ提供しません。ただし、サービス提供に必要なクラウド基盤等の委託先では、必要な範囲で情報を取り扱います。</p>
+   <h3>5. 公開範囲</h3><p>チーム内の情報は、チーム管理者が設定した役割および公開範囲に基づいて表示されます。招待コードを知る人が参加できる場合があるため、招待コードは適切に管理してください。</p>
+   <h3>6. データの修正・削除</h3><p>プロフィール情報は、付与された権限の範囲で修正できます。チームからの退出、メンバー削除またはチームデータの削除は、チーム管理者へご相談ください。</p>
+   <h3>7. 安全管理</h3><p>アクセス権限の制御等により情報の保護に努めますが、端末の紛失、招待コードの漏えい等を防ぐため、利用者自身も適切な管理を行ってください。</p>
+   <h3>8. ポリシーの変更</h3><p>機能追加や運用方法の変更に応じて、本ポリシーを更新する場合があります。変更後の内容はアプリ内で表示します。</p>
+ </div>`)}
  </section>`;
 }
 function toggleMeetingCustomSettings(){const box=document.getElementById('meetingCustomSettings');if(box)box.hidden=document.getElementById('meetingPolicy')?.value!=='custom';}
@@ -1932,7 +1975,7 @@ function saveDisplaySettings(){
  toast('表示設定を保存しました');
 }
 function exportTeamData(){
- const data={version:'0.56.1',exportedAt:new Date().toISOString(),localStorage:{}};
+ const data={version:'0.56.2',exportedAt:new Date().toISOString(),localStorage:{}};
  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); if(k&&k.startsWith('teamTheory')) data.localStorage[k]=localStorage.getItem(k)}
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`TEAM_Theory_backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); toast('バックアップを書き出しました');
 }
@@ -2195,7 +2238,7 @@ if ('serviceWorker' in navigator) {
     refreshing = true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=0.56.1', { updateViaCache: 'none' })
+  navigator.serviceWorker.register('./sw.js?v=0.56.2', { updateViaCache: 'none' })
     .then(reg => {
       reg.update().catch(()=>{});
       setInterval(() => reg.update().catch(()=>{}), 60 * 1000);
