@@ -1,4 +1,4 @@
--- TEAM Theory v0.54.0
+-- TEAM Theory v0.54.1
 -- ミーティング本体をチーム単位でクラウド共有
 
 create table if not exists public.team_meetings (

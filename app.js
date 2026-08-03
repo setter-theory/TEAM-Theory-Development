@@ -467,11 +467,11 @@ async function loadCloudMeetings(teamId=loadAccount()?.teamId){
   const c=cloudClient(),a=loadAccount();
   if(!c || !a?.cloud || !teamId) return [];
   await ensureCloudSession();
-  const result=await c.from('team_meetings').select('id,payload,updated_at').eq('team_id',teamId).order('updated_at',{ascending:true});
+  const result=await c.from('team_meetings').select('id,payload,created_by,updated_at').eq('team_id',teamId).order('updated_at',{ascending:true});
   if(result.error) throw result.error;
   const cloud=(result.data||[]).map(row=>{
     const m=normalizeCloudMeetingPayload(row.payload)||{};
-    return {...m,id:row.id,teamId,cloud:true,updatedAt:row.updated_at?new Date(row.updated_at).getTime():(m.updatedAt||m.closedAt||m.createdAt||Date.now())};
+    return {...m,id:row.id,teamId,createdByUserId:m.createdByUserId||row.created_by||'',cloud:true,updatedAt:row.updated_at?new Date(row.updated_at).getTime():(m.updatedAt||m.closedAt||m.createdAt||Date.now())};
   });
   const all=loadMeetings();
   const others=all.filter(m=>m.teamId!==teamId);
@@ -494,7 +494,7 @@ async function syncCloudMeetings(meetings=loadMeetings()){
   try{
     await ensureCloudSession();
     const rows=meetings.filter(m=>m.teamId===a.teamId).map(m=>({
-      id:String(m.id),team_id:a.teamId,payload:{...m,cloud:true},updated_at:new Date(m.updatedAt||m.closedAt||m.createdAt||Date.now()).toISOString()
+      id:String(m.id),team_id:a.teamId,created_by:m.createdByUserId||currentTeamMembers().find(x=>x.isCurrent)?.userId||null,payload:{...m,cloud:true},updated_at:new Date(m.updatedAt||m.closedAt||m.createdAt||Date.now()).toISOString()
     }));
     if(rows.length){const result=await c.from('team_meetings').upsert(rows,{onConflict:'id'});if(result.error)throw result.error;}
   }catch(error){console.error('syncCloudMeetings failed',error)}
@@ -618,6 +618,29 @@ function canManageMembers(){
  const me=currentTeamMembers().find(m=>m.isCurrent);
  return a.isOwner===true || manageable.includes(a.role||'') || manageable.includes(me?.role||'');
 }
+function currentCloudUserId(){
+ const me=currentTeamMembers().find(m=>m.isCurrent);
+ return String(me?.userId||'');
+}
+function isMeetingCreator(meeting){
+ const userId=currentCloudUserId();
+ if(userId && meeting?.createdByUserId) return userId===String(meeting.createdByUserId);
+ const a=loadAccount();
+ return !meeting?.createdByUserId && !!a && meeting?.ownerName===a.displayName;
+}
+function canEndMeeting(meeting){
+ const a=loadAccount();
+ const me=currentTeamMembers().find(m=>m.isCurrent);
+ const role=me?.role||a?.role||'';
+ return isMeetingCreator(meeting) || a?.isOwner===true || ['監督','コーチ'].includes(role);
+}
+function canDeleteMeeting(meeting){
+ const a=loadAccount();
+ const me=currentTeamMembers().find(m=>m.isCurrent);
+ const role=me?.role||a?.role||'';
+ return isMeetingCreator(meeting) || a?.isOwner===true || role==='監督';
+}
+function canRenameMeeting(meeting){ return canEndMeeting(meeting); }
 function migrateLegacyMeetingOwnership(){
   const accounts=loadAccounts();
   if(!accounts.length) return;
@@ -730,7 +753,7 @@ function welcomeView(){
          <p class="alia-tagline">教わるから、考えるへ。</p>
        </div>
      </div>
-     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.54.0" alt="Alia">
+     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.54.1" alt="Alia">
    </div>
    ${savedTeamsView()}
    <div class="welcome-actions">
@@ -739,7 +762,7 @@ function welcomeView(){
    </div>
    <button class="welcome-utility" onclick="showTopSettingsNotice()"><span class="welcome-utility-icon">⚙</span><span>設定・その他</span><span class="welcome-utility-arrow">›</span></button>
    <div class="alia-support">♥ Aliaがチームの成長をサポートするよ！ ♥</div>
-   <div class="welcome-version">Version 0.54.0</div>
+   <div class="welcome-version">Version 0.54.1</div>
  </main>`;
 }
 function savedTeamsView(){
@@ -765,7 +788,7 @@ function createTeamView(){
      <div class="create-field"><label class="create-label"><span class="create-label-icon shield-icon">✦</span><span>役割</span></label><select id="role" class="input create-input create-select">${roleOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🏐</span><span>ポジション</span></label><select id="position" class="input create-input create-select">${positionOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🎓</span><span>学年</span></label><select id="grade" class="input create-input create-select">${gradeOptions()}</select></div>
-     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.54.0" class="create-alia" alt="Alia"></div>
+     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.54.1" class="create-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions create-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon home-svg">⌂</span><span>トップ</span></button><button class="bottom-action primary-action" onclick="createTeamAccount()"><span>チームを作成する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -780,7 +803,7 @@ function joinTeamView(){
      <div class="join-field"><label class="join-label"><span class="join-label-icon shield-icon">★</span><span>参加時の役割</span></label><div class="input join-input join-role-fixed" aria-readonly="true"><span>選手</span><small>固定</small></div><small class="join-help">安全のため参加時は「選手」で登録されます。監督・コーチ・マネージャーへの変更は、参加後に監督が行います。</small></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🏐</span><span>ポジション</span></label><select id="joinPosition" class="input join-input join-select">${positionOptions()}</select></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🎓</span><span>学年</span></label><select id="joinGrade" class="input join-input join-select">${gradeOptions()}</select></div>
-     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.54.0" class="join-alia" alt="Alia"></div>
+     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.54.1" class="join-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions join-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon">⌂</span><span>トップ</span></button><button class="bottom-action join-action" onclick="joinTeamAccount()"><span>参加する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -1166,11 +1189,11 @@ function summaryView(){
  const methodSections=adviceSections.map(section=>`<div class="method-block adaptive-method-block"><strong>${esc(section.icon)} ${esc(section.label)}</strong><div>${esc(section.text)}</div></div>`).join('');
  const evidenceItems=aliaEvidence(m,aliaContext).map(x=>`<li>${esc(x)}</li>`).join('');
  const sourceOpinions = m.entries.length ? m.entries.map((e,i)=>`<article class="summary-source-card"><div class="summary-source-number">${i+1}</div><div class="summary-source-body"><div class="summary-source-meta"><strong>${esc(e.name)}</strong><small>${new Date(e.createdAt||Date.now()).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}</small></div><p>${esc(e.text)}</p></div></article>`).join('') : '<div class="meeting-empty dark-empty"><span>♡</span><b>意見はまだありません</b><small>意見を入力すると、発言者と内容がここに残ります。</small></div>';
- return `<section class="summary-page"><h2 class="page-title">ミーティングまとめ</h2><div class="summary-source-section player-opinions-main"><div class="summary-panel-head player-voices-head"><div><small>PLAYER VOICES</small><h3>選手から出た意見</h3></div><span>${m.entries.length}件</span></div><div class="summary-source-list">${sourceOpinions}</div></div><div class="alia-plan-card"><div class="summary-panel-head alia-plan-head"><div><small>ALIA ADVICE</small></div><span class="alia-context-chip">${esc(aliaContext.domainLabel)}・${esc(aliaContext.audience)}・${esc(aliaContext.levelLabel)}</span></div><div class="action-plan-list"><div class="action-plan-card issue"><span class="action-plan-label">課題</span><div class="action-plan-answer">${esc(plan.issue)}</div></div><div class="action-plan-card action"><span class="action-plan-label">行動</span><div class="action-plan-answer">${esc(plan.action)}</div></div><div class="action-plan-card method"><span class="action-plan-label">方法</span><div class="action-plan-answer method-answer">${methodSections}</div></div></div><button id="alia-evidence-btn" class="alia-evidence-toggle" onclick="toggleAliaEvidence()">根拠を見る</button><div id="alia-evidence" class="alia-evidence-panel" hidden><strong>提案の考え方</strong><ul>${evidenceItems}</ul><small>安全性と実行しやすさを優先した一般的な知見です。医療・栄養上の個別判断が必要な場合は専門家へ相談してください。</small></div></div><div class="summary-bottom-actions two-actions"><button class="btn back-action" onclick="state.view='room';render()">‹ 入力へ戻る</button><button class="btn gold" onclick="finalize()">確定して保存</button></div></section>`;
+ return `<section class="summary-page"><h2 class="page-title">ミーティングまとめ</h2><div class="summary-source-section player-opinions-main"><div class="summary-panel-head player-voices-head"><div><small>PLAYER VOICES</small><h3>選手から出た意見</h3></div><span>${m.entries.length}件</span></div><div class="summary-source-list">${sourceOpinions}</div></div><div class="alia-plan-card"><div class="summary-panel-head alia-plan-head"><div><small>ALIA ADVICE</small></div><span class="alia-context-chip">${esc(aliaContext.domainLabel)}・${esc(aliaContext.audience)}・${esc(aliaContext.levelLabel)}</span></div><div class="action-plan-list"><div class="action-plan-card issue"><span class="action-plan-label">課題</span><div class="action-plan-answer">${esc(plan.issue)}</div></div><div class="action-plan-card action"><span class="action-plan-label">行動</span><div class="action-plan-answer">${esc(plan.action)}</div></div><div class="action-plan-card method"><span class="action-plan-label">方法</span><div class="action-plan-answer method-answer">${methodSections}</div></div></div><button id="alia-evidence-btn" class="alia-evidence-toggle" onclick="toggleAliaEvidence()">根拠を見る</button><div id="alia-evidence" class="alia-evidence-panel" hidden><strong>提案の考え方</strong><ul>${evidenceItems}</ul><small>安全性と実行しやすさを優先した一般的な知見です。医療・栄養上の個別判断が必要な場合は専門家へ相談してください。</small></div></div><div class="summary-bottom-actions two-actions"><button class="btn back-action" onclick="state.view='room';render()">‹ 入力へ戻る</button>${canEndMeeting(m)?`<button class="btn gold" onclick="finalize()">確定して保存</button>`:`<button class="btn gold" onclick="go('meetings')">履歴へ戻る</button>`}</div></section>`;
 }
 function historyView(){
  const ms=currentTeamMeetings().sort((a,b)=>b.createdAt-a.createdAt);
- return `<section class="history-page"><h2 class="page-title">ミーティング履歴</h2><p class="subtitle">過去の話し合いと結論を見返せます。</p>${ms.length?`<div class="history-list">${ms.map(m=>`<article class="history-card history-card-modern" data-meeting-id="${esc(m.id)}"><button class="history-more-btn" aria-label="操作メニュー" onclick="toggleHistoryMenu(event,'${m.id}')">⋯</button><div id="history-menu-${m.id}" class="history-card-menu" hidden><button onclick="resume('${m.id}')">${m.status==='open'?'▶ 続きから':'👁 詳細を見る'}</button><button onclick="renameMeeting('${m.id}')">✎ 名前を変更</button><button onclick="duplicateMeeting('${m.id}')">▤ 複製</button>${m.status==='closed'?`<button onclick="toggleActionCompleted('${m.id}')">${m.actionCompleted?'✓ 実行確認を外す':'✓ 実行済みにする'}</button>`:''}<button class="danger" onclick="deleteMeeting('${m.id}')">🗑 削除</button></div><div class="history-head"><span class="pill ${m.status==='closed'?'closed':''}">${m.status==='closed'?'完了':'進行中'}</span><span>${new Date(m.createdAt).toLocaleDateString('ja-JP')}</span></div><h3>${esc(m.group)}ミーティング</h3><p class="history-theme">${esc(m.theme||'テーマ未設定')}</p><div class="history-stats"><span>意見 <b>${m.entries.length}</b>件</span><span>${new Date(m.createdAt).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}</span>${m.status==='closed'?`<span class="history-action-status ${m.actionCompleted?'done':''}">${m.actionCompleted?'実行済み':'未確認'}</span>`:''}</div>${m.summary?`<div class="summary-preview">${esc(m.summary).split('\n').join('<br>')}</div>`:''}<div class="actions"><button class="btn primary" onclick="resume('${m.id}')">${m.status==='open'?'続きから':'詳細を見る'}</button></div></article>`).join('')}</div>`:'<div class="meeting-empty dark-empty"><span>▤</span><b>履歴はまだありません</b><small>ミーティングを保存するとここに表示されます。</small></div>'}<div class="history-bottom-actions"><button class="btn back-action" onclick="go('home')">‹ ホームへ戻る</button></div></section>`;
+ return `<section class="history-page"><h2 class="page-title">ミーティング履歴</h2><p class="subtitle">過去の話し合いと結論を見返せます。</p>${ms.length?`<div class="history-list">${ms.map(m=>{const canEnd=canEndMeeting(m),canDelete=canDeleteMeeting(m),canRename=canRenameMeeting(m);return `<article class="history-card history-card-modern" data-meeting-id="${esc(m.id)}"><button class="history-more-btn" aria-label="操作メニュー" onclick="toggleHistoryMenu(event,'${m.id}')">⋯</button><div id="history-menu-${m.id}" class="history-card-menu" hidden><button onclick="resume('${m.id}')">${m.status==='open'?'▶ 続きから':'👁 詳細を見る'}</button>${canRename?`<button onclick="renameMeeting('${m.id}')">✎ 名前を変更</button>`:''}<button onclick="duplicateMeeting('${m.id}')">▤ 複製</button>${m.status==='open'&&canEnd?`<button onclick="endMeeting('${m.id}')">✓ 終了して履歴へ</button>`:''}${m.status==='closed'&&canEnd?`<button onclick="toggleActionCompleted('${m.id}')">${m.actionCompleted?'✓ 実行確認を外す':'✓ 実行済みにする'}</button>`:''}${canDelete?`<button class="danger" onclick="deleteMeeting('${m.id}')">🗑 完全削除</button>`:''}</div><div class="history-head"><span class="pill ${m.status==='closed'?'closed':''}">${m.status==='closed'?'完了':'進行中'}</span><span>${new Date(m.createdAt).toLocaleDateString('ja-JP')}</span></div><h3>${esc(m.group)}ミーティング</h3><p class="history-theme">${esc(m.theme||'テーマ未設定')}</p><div class="history-stats"><span>意見 <b>${m.entries.length}</b>件</span><span>${new Date(m.createdAt).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}</span>${m.status==='closed'?`<span class="history-action-status ${m.actionCompleted?'done':''}">${m.actionCompleted?'実行済み':'未確認'}</span>`:''}</div>${m.summary?`<div class="summary-preview">${esc(m.summary).split('\n').join('<br>')}</div>`:''}<div class="actions"><button class="btn primary" onclick="resume('${m.id}')">${m.status==='open'?'続きから':'詳細を見る'}</button></div></article>`}).join('')}</div>`:'<div class="meeting-empty dark-empty"><span>▤</span><b>履歴はまだありません</b><small>ミーティングを保存するとここに表示されます。</small></div>'}<div class="history-bottom-actions"><button class="btn back-action" onclick="go('home')">‹ ホームへ戻る</button></div></section>`;
 }
 function closeHistoryMenus(exceptId=''){
  document.querySelectorAll('.history-card-menu').forEach(menu=>{ if(menu.id!==`history-menu-${exceptId}`) menu.hidden=true; });
@@ -1188,6 +1211,7 @@ function renameMeeting(id){
  const meetings=loadMeetings();
  const m=meetings.find(item=>item.id===id);
  if(!m) return toast('履歴が見つかりません');
+ if(!canRenameMeeting(m)) return toast('このミーティングの名前を変更する権限がありません');
  const name=prompt('履歴に表示するテーマ名を入力してください',m.theme||'');
  if(name===null) return;
  const trimmed=name.trim();
@@ -1201,7 +1225,7 @@ function duplicateMeeting(id){
  const source=meetings.find(item=>item.id===id);
  if(!source) return toast('履歴が見つかりません');
  const copy=JSON.parse(JSON.stringify(source));
- copy.id=uid('m'); copy.createdAt=Date.now(); copy.closedAt=null; copy.status='open'; copy.theme=`${source.theme||'テーマ未設定'}（コピー）`;
+ copy.id=uid('m'); copy.createdAt=Date.now(); copy.closedAt=null; copy.status='open'; copy.ownerName=loadAccount()?.displayName||copy.ownerName; copy.createdByUserId=currentCloudUserId(); copy.createdByRole=loadAccount()?.role||'選手'; copy.theme=`${source.theme||'テーマ未設定'}（コピー）`;
  meetings.push(copy); saveMeetings(meetings); render(); toast('ミーティングを複製しました');
 }
 function toggleActionCompleted(id){
@@ -1209,17 +1233,31 @@ function toggleActionCompleted(id){
  const meetings=loadMeetings();
  const m=meetings.find(item=>item.id===id);
  if(!m) return toast('履歴が見つかりません');
+ if(!canEndMeeting(m)) return toast('この操作を行う権限がありません');
  m.actionCompleted=!m.actionCompleted;
  m.actionCompletedAt=m.actionCompleted?Date.now():null;
  saveMeetings(meetings); render(); toast(m.actionCompleted?'実行済みにしました':'実行確認を外しました');
+}
+function endMeeting(id){
+ closeHistoryMenus();
+ const meetings=loadMeetings();
+ const m=meetings.find(item=>item.id===id);
+ if(!m) return toast('履歴が見つかりません');
+ if(!canEndMeeting(m)) return toast('このミーティングを終了する権限がありません');
+ if(m.status==='closed') return toast('このミーティングは終了済みです');
+ if(!confirm(`${m.group||''}ミーティング「${m.theme||'テーマ未設定'}」を終了して履歴へ移動しますか？`)) return;
+ m.summary=m.summary||makeSummary(m);
+ m.status='closed';m.closedAt=Date.now();m.updatedAt=Date.now();
+ saveMeetings(meetings);render();toast('ミーティングを終了して履歴へ移動しました');
 }
 function deleteMeeting(id){
  closeHistoryMenus();
  const meetings=loadMeetings();
  const target=meetings.find(item=>item.id===id);
  if(!target) return toast('履歴が見つかりません');
+ if(!canDeleteMeeting(target)) return toast('このミーティングを削除する権限がありません');
  const label=`${target.group||''}ミーティング「${target.theme||'テーマ未設定'}」`;
- if(!confirm(`${label}を削除しますか？\n\nこの操作は元に戻せません。`)) return;
+ if(!confirm(`${label}を完全に削除しますか？\n\nこの操作は元に戻せません。通常は「終了して履歴へ」を使用してください。`)) return;
  saveMeetings(meetings.filter(item=>item.id!==id));
  deleteCloudMeeting(id);
  const deleted=new Set(read('tt_deleted_meeting_ids', [])); deleted.add(id); write('tt_deleted_meeting_ids',[...deleted]);
@@ -1524,7 +1562,7 @@ async function deleteMember(id){
 function menuView(){
  const a=loadAccount();
  return `<section class="menu-page menu-hub-page">
-   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.54.0" alt="Alia"></div>
+   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.54.1" alt="Alia"></div>
    <div class="menu-hub-grid">
      ${menuHubItem('👥','チーム情報','チーム名・学校名・カテゴリー・レベル',"go('teamInfo')",'pink')}
      ${menuHubItem('👤','マイプロフィール','名前・役割・ポジション・学年',"go('myProfile')",'pink')}
@@ -1622,7 +1660,7 @@ function helpView(){
 }
 function appInfoView(){
  return `<section class="settings-detail-page">${menuBack('アプリ情報','ABOUT')}
- ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.54.0</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
+ ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.54.1</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
  ${settingsCard('情報','',`<button class="settings-menu-row" onclick="toast('更新履歴は準備中です')"><span><b>更新履歴</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('利用規約は準備中です')"><span><b>利用規約</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('プライバシーポリシーは準備中です')"><span><b>プライバシーポリシー</b></span><em>›</em></button>`)}
  </section>`;
 }
@@ -1688,7 +1726,7 @@ function saveDisplaySettings(){
  toast('表示設定を保存しました');
 }
 function exportTeamData(){
- const data={version:'0.54.0',exportedAt:new Date().toISOString(),localStorage:{}};
+ const data={version:'0.54.1',exportedAt:new Date().toISOString(),localStorage:{}};
  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); if(k&&k.startsWith('teamTheory')) data.localStorage[k]=localStorage.getItem(k)}
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`TEAM_Theory_backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); toast('バックアップを書き出しました');
 }
@@ -1698,7 +1736,7 @@ function importTeamData(event){
 function confirmTeamReset(){ if(confirm('現在のチームを削除しますか？\n履歴と設定も削除されます。')) resetAll(); }
 function confirmAllReset(){ if(confirm('この端末のTEAM Theoryデータをすべて削除しますか？')){localStorage.clear();location.reload();} }
 
-function createMeeting(group){ const a=loadAccount(); const meetings=loadMeetings(); const m={id:uid(),teamId:a.teamId,type:state.selectedType,group,themeCategory:'',theme:'',aliaContext:null,entries:[],summary:'',status:'open',createdAt:Date.now(),ownerName:a.displayName,ownerPosition:a.position||'未設定',ownerGrade:a.grade||'未設定',updatedAt:Date.now()}; meetings.push(m);saveMeetings(meetings);state.currentMeetingId=m.id;state.view='room';render(); }
+function createMeeting(group){ const a=loadAccount(); const meetings=loadMeetings(); const m={id:uid(),teamId:a.teamId,type:state.selectedType,group,themeCategory:'',theme:'',aliaContext:null,entries:[],summary:'',status:'open',createdAt:Date.now(),ownerName:a.displayName,ownerPosition:a.position||'未設定',ownerGrade:a.grade||'未設定',createdByUserId:currentCloudUserId(),createdByRole:a.role||'選手',updatedAt:Date.now()}; meetings.push(m);saveMeetings(meetings);state.currentMeetingId=m.id;state.view='room';render(); }
 function getCurrent(){return loadMeetings().find(m=>m.id===state.currentMeetingId)}
 function mutate(fn){const ms=loadMeetings();const i=ms.findIndex(m=>m.id===state.currentMeetingId);if(i<0)return;fn(ms[i]);ms[i].updatedAt=Date.now();saveMeetings(ms);}
 function updateThemeCategory(v){mutate(m=>{m.themeCategory=v;m.aliaContext=classifyAliaContext(m)});render()}
@@ -1909,7 +1947,7 @@ function composeSummary(){
  return `分類：${categoryLabel||'未選択'}\nAI分類：${ctx.domainLabel}（${ctx.audience}）\nテーマ：${m.theme||'今回のテーマ'}\n\n【課題】\n${plan.issue}\n\n【行動】\n${plan.action}\n\n【方法】\n${plan.method}\n\n【元の発言】\n${points}`;
 }
 function openSummary(){state.view='summary';render()}
-function finalize(){const m=getCurrent();if(!m){toast('ミーティングが見つかりません');return}const s=composeSummary();mutate(item=>{item.summary=s;item.status='closed';item.closedAt=Date.now()});state.view='meetings';render();toast('ミーティングを保存しました')}
+function finalize(){const m=getCurrent();if(!m){toast('ミーティングが見つかりません');return}if(!canEndMeeting(m)){toast('このミーティングを終了する権限がありません');return}const s=composeSummary();mutate(item=>{item.summary=s;item.status='closed';item.closedAt=Date.now()});state.view='meetings';render();toast('ミーティングを保存しました')}
 function resume(id){state.currentMeetingId=id;const m=getCurrent();state.view=m?.status==='closed'?'summary':'room';render()}
 function switchTeam(teamId){
  const account=loadAccounts().find(a=>a.teamId===teamId);
@@ -1944,7 +1982,7 @@ if ('serviceWorker' in navigator) {
     refreshing = true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=0.54.0', { updateViaCache: 'none' })
+  navigator.serviceWorker.register('./sw.js?v=0.54.1', { updateViaCache: 'none' })
     .then(reg => {
       reg.update().catch(()=>{});
       setInterval(() => reg.update().catch(()=>{}), 60 * 1000);
