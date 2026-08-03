@@ -1,11 +1,11 @@
-const CACHE = 'teamtheory-v0.50.6';
+const CACHE = 'teamtheory-v0.50.7';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=0.50.6',
-  './app.js?v=0.50.6',
-  './supabase-config.js?v=0.50.6',
-  './manifest.webmanifest?v=0.50.6',
+  './styles.css?v=0.50.7',
+  './app.js?v=0.50.7',
+  './supabase-config.js?v=0.50.7',
+  './manifest.webmanifest?v=0.50.7',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
