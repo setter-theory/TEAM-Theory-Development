@@ -1468,3 +1468,7 @@ body.member-modal-open .bottom-nav{visibility:hidden;pointer-events:none}
 .alia-settings-preview span{font-size:12px;opacity:.82}
 .home-attention.alia-reflection{border-color:rgba(244,114,182,.34)}
 .home-attention.alia-reflection .attention-icon{background:rgba(244,114,182,.18)}
+
+/* v0.56.0: school-specific meeting visibility policy */
+.active-meeting-list{display:grid;gap:14px}.team-home-progress.is-locked{opacity:.88;border-style:dashed}.active-meeting-owner{margin:8px 0 12px;color:var(--muted,#8190a5);font-size:.86rem}.meeting-custom-settings{display:grid;gap:12px;margin-top:12px;padding:14px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.025)}.meeting-custom-settings[hidden]{display:none}.settings-readonly-policy{display:flex;flex-direction:column;gap:5px;padding:15px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}.settings-readonly-policy small{color:var(--muted,#8190a5)}
+@media(min-width:760px){.active-meeting-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
