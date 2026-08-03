@@ -5,6 +5,7 @@ const state = {
   currentMeetingId: null,
   directorIssueId: null,
   directorIssueTab: 'open',
+  notificationFilter: 'all',
   growthRange: 30,
   growthMetric: 'score',
   growthCompare: 'all',
@@ -616,6 +617,8 @@ function render(){
   else if(state.view==='directorIssues') app.innerHTML=shell(directorIssuesView(),'home');
   else if(state.view==='directorIssueCreate') app.innerHTML=shell(directorIssueCreateView(),'home');
   else if(state.view==='directorIssueDetail') app.innerHTML=shell(directorIssueDetailView(),'home');
+  else if(state.view==='notifications') app.innerHTML=shell(notificationCenterView(),'home');
+  else if(state.view==='directorDashboard') app.innerHTML=shell(directorDashboardView(),'home');
   else if(state.view==='select') app.innerHTML=shell(selectView(),'home');
   else if(state.view==='room') app.innerHTML=shell(roomView(),'home');
   else if(state.view==='summary') app.innerHTML=shell(summaryView(),'home');
@@ -672,7 +675,7 @@ function welcomeView(){
          <p class="alia-tagline">教わるから、考えるへ。</p>
        </div>
      </div>
-     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.52.1" alt="Alia">
+     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.53.0" alt="Alia">
    </div>
    ${savedTeamsView()}
    <div class="welcome-actions">
@@ -681,7 +684,7 @@ function welcomeView(){
    </div>
    <button class="welcome-utility" onclick="showTopSettingsNotice()"><span class="welcome-utility-icon">⚙</span><span>設定・その他</span><span class="welcome-utility-arrow">›</span></button>
    <div class="alia-support">♥ Aliaがチームの成長をサポートするよ！ ♥</div>
-   <div class="welcome-version">Version 0.52.1</div>
+   <div class="welcome-version">Version 0.53.0</div>
  </main>`;
 }
 function savedTeamsView(){
@@ -707,7 +710,7 @@ function createTeamView(){
      <div class="create-field"><label class="create-label"><span class="create-label-icon shield-icon">✦</span><span>役割</span></label><select id="role" class="input create-input create-select">${roleOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🏐</span><span>ポジション</span></label><select id="position" class="input create-input create-select">${positionOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🎓</span><span>学年</span></label><select id="grade" class="input create-input create-select">${gradeOptions()}</select></div>
-     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.52.1" class="create-alia" alt="Alia"></div>
+     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.53.0" class="create-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions create-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon home-svg">⌂</span><span>トップ</span></button><button class="bottom-action primary-action" onclick="createTeamAccount()"><span>チームを作成する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -722,7 +725,7 @@ function joinTeamView(){
      <div class="join-field"><label class="join-label"><span class="join-label-icon shield-icon">★</span><span>参加時の役割</span></label><div class="input join-input join-role-fixed" aria-readonly="true"><span>選手</span><small>固定</small></div><small class="join-help">安全のため参加時は「選手」で登録されます。監督・コーチ・マネージャーへの変更は、参加後に監督が行います。</small></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🏐</span><span>ポジション</span></label><select id="joinPosition" class="input join-input join-select">${positionOptions()}</select></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🎓</span><span>学年</span></label><select id="joinGrade" class="input join-input join-select">${gradeOptions()}</select></div>
-     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.52.1" class="join-alia" alt="Alia"></div>
+     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.53.0" class="join-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions join-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon">⌂</span><span>トップ</span></button><button class="bottom-action join-action" onclick="joinTeamAccount()"><span>参加する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -841,6 +844,57 @@ function directorIssueStatus(issue){
  if(response?.readAt) return '既読';
  return directorIssueExpired(issue)?'期限切れ':'未読';
 }
+
+function directorIssueAppliesToMe(issue){
+ const a=loadAccount(); if(!a)return false;
+ if(issue.targetType==='grade') return !issue.targetValue || issue.targetValue===a.grade;
+ if(issue.targetType==='position') return !issue.targetValue || issue.targetValue===a.position;
+ return true;
+}
+function directorIssueDueSoon(issue){
+ if(!issue?.dueAt||issue.status!=='open'||directorIssueExpired(issue))return false;
+ const left=new Date(issue.dueAt).getTime()-Date.now();
+ return left>0&&left<=24*60*60*1000;
+}
+function myDirectorResponse(issue){return (issue.responses||[]).find(r=>r.isCurrent)||null}
+function directorNotificationItems(){
+ const manager=canCreateDirectorIssue();
+ const issues=loadDirectorIssuesLocal().filter(directorIssueAppliesToMe);
+ const items=[];
+ issues.forEach(issue=>{
+  const mine=myDirectorResponse(issue),status=directorIssueStatus(issue);
+  if(!manager&&issue.status==='open'&&status==='未読') items.push({type:'new',priority:1,issueId:issue.id,title:'新しい監督発議',text:issue.title,time:issue.createdAt});
+  if(!manager&&issue.status==='open'&&!mine?.answer&&directorIssueDueSoon(issue)) items.push({type:'due',priority:0,issueId:issue.id,title:'回答期限が近づいています',text:issue.title,time:new Date(issue.dueAt).getTime()});
+  if(!manager&&mine?.managerComment) items.push({type:'comment',priority:0,issueId:issue.id,title:'監督コメントがあります',text:mine.managerComment,time:mine.answeredAt||issue.createdAt});
+  if(manager&&issue.status==='open'){
+   const members=currentTeamMembers();
+   const answered=(issue.responses||[]).filter(r=>r.answer).length;
+   const unread=Math.max(0,members.length-(issue.responses||[]).filter(r=>r.readAt).length);
+   if(unread||answered<members.length) items.push({type:'progress',priority:2,issueId:issue.id,title:'回答状況を確認',text:`${answered}/${members.length}人回答・未読${unread}人`,time:issue.createdAt});
+  }
+ });
+ return items.sort((a,b)=>a.priority-b.priority||b.time-a.time);
+}
+function notificationIcon(type){return ({new:'📣',due:'⏰',comment:'💬',progress:'📊'})[type]||'•'}
+function notificationCenterView(){
+ const items=directorNotificationItems(),filter=state.notificationFilter||'all';
+ const filtered=filter==='all'?items:items.filter(x=>x.type===filter);
+ return `<section class="notification-page"><div class="director-page-head"><button class="settings-back" onclick="go('home')">‹</button><div><small>NOTIFICATIONS</small><h2>お知らせ</h2><p>自分に関係する発議をまとめて確認します。</p></div><button class="director-refresh" onclick="refreshDirectorIssues()">↻</button></div>
+ <div class="notification-filters"><button class="${filter==='all'?'active':''}" onclick="setNotificationFilter('all')">すべて ${items.length}</button><button class="${filter==='due'?'active':''}" onclick="setNotificationFilter('due')">期限</button><button class="${filter==='comment'?'active':''}" onclick="setNotificationFilter('comment')">コメント</button></div>
+ <div class="notification-list">${filtered.length?filtered.map(n=>`<button class="notification-card ${n.type}" onclick="openDirectorIssue('${n.issueId}')"><span>${notificationIcon(n.type)}</span><span><b>${esc(n.title)}</b><small>${esc(n.text)}</small></span><em>›</em></button>`).join(''):`<div class="meeting-empty dark-empty"><span>✓</span><b>確認が必要なお知らせはありません</b></div>`}</div></section>`;
+}
+function setNotificationFilter(v){state.notificationFilter=v;render()}
+function directorDashboardView(){
+ if(!canCreateDirectorIssue())return `<section class="director-page"><button class="back" onclick="go('home')">‹ 戻る</button><div class="meeting-empty dark-empty"><b>表示権限がありません</b></div></section>`;
+ const issues=loadDirectorIssuesLocal().filter(x=>x.status==='open'),members=currentTeamMembers();
+ const totalTargets=issues.length*members.length,totalAnswers=issues.reduce((n,x)=>n+(x.responses||[]).filter(r=>r.answer).length,0),rate=totalTargets?Math.round(totalAnswers/totalTargets*100):0;
+ const memberRows=members.map(m=>{const rs=issues.map(i=>(i.responses||[]).find(r=>r.userId===m.userId));const answered=rs.filter(r=>r?.answer).length,read=rs.filter(r=>r?.readAt).length;return `<div class="dashboard-member-row"><span class="director-response-avatar">${esc((m.displayName||'?').slice(0,1))}</span><span><b>${esc(m.displayName)}</b><small>${esc(m.grade||'未設定')}・${esc(m.position||'未設定')}</small></span><em>${answered}/${issues.length}回答</em><i>${read}/${issues.length}既読</i></div>`}).join('');
+ const issueRows=issues.map(i=>{const answered=(i.responses||[]).filter(r=>r.answer).length,read=(i.responses||[]).filter(r=>r.readAt).length;return `<button class="dashboard-issue-row" onclick="openDirectorIssue('${i.id}')"><span><b>${esc(i.title)}</b><small>${answered}/${members.length}回答・${read}/${members.length}既読</small></span><em>${members.length?Math.round(answered/members.length*100):0}%</em></button>`}).join('');
+ return `<section class="director-page dashboard-page"><div class="director-page-head"><button class="settings-back" onclick="go('home')">‹</button><div><small>DIRECTOR DASHBOARD</small><h2>監督ダッシュボード</h2><p>発議の既読・回答状況を一覧で確認します。</p></div><button class="director-refresh" onclick="refreshDirectorIssues()">↻</button></div>
+ <div class="dashboard-kpis"><div><small>現在の発議</small><b>${issues.length}</b></div><div><small>全体回答率</small><b>${rate}%</b></div><div><small>メンバー</small><b>${members.length}人</b></div></div>
+ <section class="settings-section-card"><div class="settings-section-title"><h3>発議別の状況</h3><p>タップして回答内容を確認できます。</p></div><div class="dashboard-issue-list">${issueRows||'<p class="no-answer">現在の発議はありません。</p>'}</div></section>
+ <section class="settings-section-card"><div class="settings-section-title"><h3>メンバー別の状況</h3><p>未読・未回答者を確認できます。</p></div><div class="dashboard-member-list">${memberRows||'<p class="no-answer">メンバーがいません。</p>'}</div></section></section>`;
+}
 async function loadCloudDirectorIssues(){
  const a=loadAccount(),c=cloudClient();
  if(!a?.cloud||!c) return loadDirectorIssuesLocal();
@@ -958,12 +1012,15 @@ function homeView(){
     return m?`${h}時間${m}分`:`${h}時間`;
   };
   const activeBlock=active?`<section class="team-home-active"><div class="team-home-section-head"><div><small>IN PROGRESS</small><h3>進行中のミーティング</h3></div><span class="pill">進行中</span></div><div class="team-home-progress"><div class="team-home-progress-meta"><span>${esc(TYPES[active.type]?.label||'ミーティング')}</span><span>${esc(active.group)}</span></div><h3>${esc(active.theme||'テーマ未設定')}</h3><div class="team-home-live-stats"><div><small>参加人数</small><b>${Math.max(1,new Set(active.entries.map(e=>e.name).filter(Boolean)).size)}人</b></div><div><small>開始時刻</small><b>${new Date(active.createdAt||Date.now()).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}</b></div><div><small>経過時間</small><b>${elapsedText(active.createdAt)}</b></div></div><button class="btn primary team-home-continue" onclick="resume('${active.id}')">続きから <span>›</span></button></div></section>`:`<section class="team-home-active"><div class="team-home-section-head"><div><small>IN PROGRESS</small><h3>進行中のミーティング</h3></div></div><div class="team-home-empty"><span>✓</span><div><b>現在進行中のミーティングはありません</b><small>下の3つから新しい話し合いを始められます。</small></div></div></section>`;
-  const directorIssues=loadDirectorIssuesLocal();
+  const directorIssues=loadDirectorIssuesLocal().filter(directorIssueAppliesToMe);
   const unreadDirector=directorIssues.filter(x=>directorIssueStatus(x)==='未読').length;
-  const directorBlock=`<section class="team-home-director"><div class="team-home-section-head"><div><small>DIRECTOR ISSUES</small><h3>監督発議</h3></div>${unreadDirector?`<span class="director-unread-badge">未読 ${unreadDirector}</span>`:''}</div><button class="team-home-director-card" onclick="go('directorIssues')"><span class="director-home-icon">📣</span><span><b>${directorIssues.length?esc(directorIssues[0].title):'監督からのテーマ'}</b><small>${directorIssues.length?`${directorIssueStatus(directorIssues[0])}・${directorIssues.length}件`:'発議されたテーマを確認・回答します'}</small></span><span>›</span></button></section>`;
+  const notices=directorNotificationItems(),urgent=notices.filter(x=>x.type==='due'||x.type==='comment').length;
+  const attentionBlock=notices.length?`<section class="home-attention"><button onclick="go('notifications')"><span class="attention-icon">${urgent?'!':'•'}</span><span><b>${urgent?'確認が必要なお知らせがあります':'新しいお知らせがあります'}</b><small>${notices[0]?esc(notices[0].title+'・'+notices[0].text):''}</small></span><em>${notices.length}件 ›</em></button></section>`:'';
+  const directorBlock=`<section class="team-home-director"><div class="team-home-section-head"><div><small>DIRECTOR ISSUES</small><h3>監督発議</h3></div><div class="director-head-actions">${unreadDirector?`<span class="director-unread-badge">未読 ${unreadDirector}</span>`:''}${canCreateDirectorIssue()?`<button onclick="go('directorDashboard')">集計 ›</button>`:''}</div></div><button class="team-home-director-card" onclick="go('directorIssues')"><span class="director-home-icon">📣</span><span><b>${directorIssues.length?esc(directorIssues[0].title):'監督からのテーマ'}</b><small>${directorIssues.length?`${directorIssueStatus(directorIssues[0])}・${directorIssues.length}件`:'発議されたテーマを確認・回答します'}</small></span><span>›</span></button></section>`;
   const recentBlock=`<section class="team-home-recent"><div class="team-home-section-head"><div><small>RECENT</small><h3>最近のミーティング</h3></div><button class="team-home-link" onclick="go('meetings')">すべて見る ›</button></div>${recent.length?`<div class="team-home-recent-list">${recent.map(m=>`<button class="team-home-recent-card" onclick="resume('${m.id}')"><span class="team-home-recent-mark">✓</span><span><b>${esc(m.group)}ミーティング</b><small>${esc(m.theme||'テーマ未設定')}・${new Date(m.createdAt).toLocaleDateString('ja-JP')}</small></span><span>›</span></button>`).join('')}</div>`:`<div class="team-home-recent-empty">終了したミーティングはまだありません。</div>`}</section>`;
   return `<section class="team-home-dashboard">
-    <header class="team-home-header"><div><small>TEAM HOME</small><h2>${esc(a.teamName)}</h2><p>${today}</p></div><button class="team-home-members" onclick="go('members')" aria-label="参加メンバー一覧を開く"><span class="team-home-members-icon">♟</span><span class="team-home-members-count">${memberCount}人</span><span class="team-home-members-arrow">›</span></button></header>
+    <header class="team-home-header"><div><small>TEAM HOME</small><h2>${esc(a.teamName)}</h2><p>${today}</p></div><div class="team-home-header-actions"><button class="home-notification-button" onclick="go('notifications')" aria-label="お知らせを開く"><span>♢</span>${notices.length?`<b>${notices.length}</b>`:''}</button><button class="team-home-members" onclick="go('members')" aria-label="参加メンバー一覧を開く"><span class="team-home-members-icon">♟</span><span class="team-home-members-count">${memberCount}人</span><span class="team-home-members-arrow">›</span></button></div></header>
+    ${attentionBlock}
     ${directorBlock}
     ${activeBlock}
     <section class="team-home-start"><div class="team-home-section-head"><div><small>START MEETING</small><h3>ミーティングを始める</h3></div><span>3種類</span></div><div class="team-home-meeting-grid">${meetingCard('position','ポジション別','同じ役割だから見える課題を共有')}${meetingCard('grade','学年別','学年ごとの役割と行動を整理')}${meetingCard('all','全体','各グループの結論をチームの方針へ')}</div></section>
@@ -1391,7 +1448,7 @@ async function deleteMember(id){
 function menuView(){
  const a=loadAccount();
  return `<section class="menu-page menu-hub-page">
-   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.52.1" alt="Alia"></div>
+   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.53.0" alt="Alia"></div>
    <div class="menu-hub-grid">
      ${menuHubItem('👥','チーム情報','チーム名・学校名・カテゴリー・レベル',"go('teamInfo')",'pink')}
      ${menuHubItem('👤','マイプロフィール','名前・役割・ポジション・学年',"go('myProfile')",'pink')}
@@ -1489,7 +1546,7 @@ function helpView(){
 }
 function appInfoView(){
  return `<section class="settings-detail-page">${menuBack('アプリ情報','ABOUT')}
- ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.52.1</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
+ ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.53.0</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
  ${settingsCard('情報','',`<button class="settings-menu-row" onclick="toast('更新履歴は準備中です')"><span><b>更新履歴</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('利用規約は準備中です')"><span><b>利用規約</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('プライバシーポリシーは準備中です')"><span><b>プライバシーポリシー</b></span><em>›</em></button>`)}
  </section>`;
 }
@@ -1555,7 +1612,7 @@ function saveDisplaySettings(){
  toast('表示設定を保存しました');
 }
 function exportTeamData(){
- const data={version:'0.52.1',exportedAt:new Date().toISOString(),localStorage:{}};
+ const data={version:'0.53.0',exportedAt:new Date().toISOString(),localStorage:{}};
  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); if(k&&k.startsWith('teamTheory')) data.localStorage[k]=localStorage.getItem(k)}
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`TEAM_Theory_backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); toast('バックアップを書き出しました');
 }
@@ -1811,7 +1868,7 @@ if ('serviceWorker' in navigator) {
     refreshing = true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=0.52.1', { updateViaCache: 'none' })
+  navigator.serviceWorker.register('./sw.js?v=0.53.0', { updateViaCache: 'none' })
     .then(reg => {
       reg.update().catch(()=>{});
       setInterval(() => reg.update().catch(()=>{}), 60 * 1000);
