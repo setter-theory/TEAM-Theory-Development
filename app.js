@@ -4,6 +4,7 @@ const state = {
   selectedGroup: null,
   currentMeetingId: null,
   directorIssueId: null,
+  directorIssueTab: 'open',
   growthRange: 30,
   growthMetric: 'score',
   growthCompare: 'all',
@@ -671,7 +672,7 @@ function welcomeView(){
          <p class="alia-tagline">教わるから、考えるへ。</p>
        </div>
      </div>
-     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.52.0" alt="Alia">
+     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.52.1" alt="Alia">
    </div>
    ${savedTeamsView()}
    <div class="welcome-actions">
@@ -680,7 +681,7 @@ function welcomeView(){
    </div>
    <button class="welcome-utility" onclick="showTopSettingsNotice()"><span class="welcome-utility-icon">⚙</span><span>設定・その他</span><span class="welcome-utility-arrow">›</span></button>
    <div class="alia-support">♥ Aliaがチームの成長をサポートするよ！ ♥</div>
-   <div class="welcome-version">Version 0.52.0</div>
+   <div class="welcome-version">Version 0.52.1</div>
  </main>`;
 }
 function savedTeamsView(){
@@ -706,7 +707,7 @@ function createTeamView(){
      <div class="create-field"><label class="create-label"><span class="create-label-icon shield-icon">✦</span><span>役割</span></label><select id="role" class="input create-input create-select">${roleOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🏐</span><span>ポジション</span></label><select id="position" class="input create-input create-select">${positionOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🎓</span><span>学年</span></label><select id="grade" class="input create-input create-select">${gradeOptions()}</select></div>
-     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.52.0" class="create-alia" alt="Alia"></div>
+     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.52.1" class="create-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions create-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon home-svg">⌂</span><span>トップ</span></button><button class="bottom-action primary-action" onclick="createTeamAccount()"><span>チームを作成する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -721,7 +722,7 @@ function joinTeamView(){
      <div class="join-field"><label class="join-label"><span class="join-label-icon shield-icon">★</span><span>参加時の役割</span></label><div class="input join-input join-role-fixed" aria-readonly="true"><span>選手</span><small>固定</small></div><small class="join-help">安全のため参加時は「選手」で登録されます。監督・コーチ・マネージャーへの変更は、参加後に監督が行います。</small></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🏐</span><span>ポジション</span></label><select id="joinPosition" class="input join-input join-select">${positionOptions()}</select></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🎓</span><span>学年</span></label><select id="joinGrade" class="input join-input join-select">${gradeOptions()}</select></div>
-     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.52.0" class="join-alia" alt="Alia"></div>
+     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.52.1" class="join-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions join-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon">⌂</span><span>トップ</span></button><button class="bottom-action join-action" onclick="joinTeamAccount()"><span>参加する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -832,11 +833,13 @@ function canCreateDirectorIssue(){
  return !!a && (a.isOwner===true || ['監督','コーチ'].includes(a.role||''));
 }
 function directorIssueTargetLabel(v){ return ({all:'全体',grade:'学年別',position:'ポジション別'})[v]||'全体'; }
+function directorIssueExpired(issue){ return !!issue.dueAt && Date.now()>new Date(issue.dueAt).getTime(); }
 function directorIssueStatus(issue){
+ if(issue.status!=='open') return '終了';
  const response=(issue.responses||[]).find(r=>r.isCurrent);
  if(response?.answer) return '回答済み';
  if(response?.readAt) return '既読';
- return '未読';
+ return directorIssueExpired(issue)?'期限切れ':'未読';
 }
 async function loadCloudDirectorIssues(){
  const a=loadAccount(),c=cloudClient();
@@ -844,20 +847,20 @@ async function loadCloudDirectorIssues(){
  const session=await ensureCloudSession();
  const issueResult=await c.from('director_issues')
   .select('id,team_id,title,body,target_type,target_value,due_at,status,created_by,created_at')
-  .eq('team_id',a.teamId).eq('status','open').order('created_at',{ascending:false});
+  .eq('team_id',a.teamId).order('created_at',{ascending:false});
  if(issueResult.error) throw issueResult.error;
  const ids=(issueResult.data||[]).map(x=>x.id);
  let responses=[];
  if(ids.length){
   const responseResult=await c.from('director_issue_responses')
-   .select('id,issue_id,user_id,display_name,answer,read_at,answered_at,created_at')
+   .select('id,issue_id,user_id,display_name,answer,manager_comment,read_at,answered_at,created_at')
    .in('issue_id',ids).order('created_at',{ascending:true});
   if(responseResult.error) throw responseResult.error;
   responses=responseResult.data||[];
  }
  const issues=(issueResult.data||[]).map(row=>({
   id:row.id,teamId:row.team_id,title:row.title,body:row.body||'',targetType:row.target_type||'all',targetValue:row.target_value||'',dueAt:row.due_at||'',status:row.status||'open',createdBy:row.created_by,createdAt:new Date(row.created_at).getTime(),
-  responses:responses.filter(r=>r.issue_id===row.id).map(r=>({id:r.id,userId:r.user_id,displayName:r.display_name||'',answer:r.answer||'',readAt:r.read_at?new Date(r.read_at).getTime():0,answeredAt:r.answered_at?new Date(r.answered_at).getTime():0,isCurrent:r.user_id===session?.user?.id}))
+  responses:responses.filter(r=>r.issue_id===row.id).map(r=>({id:r.id,userId:r.user_id,displayName:r.display_name||'',answer:r.answer||'',managerComment:r.manager_comment||'',readAt:r.read_at?new Date(r.read_at).getTime():0,answeredAt:r.answered_at?new Date(r.answered_at).getTime():0,isCurrent:r.user_id===session?.user?.id}))
  }));
  saveDirectorIssuesLocal(issues); return issues;
 }
@@ -867,13 +870,16 @@ async function refreshDirectorIssues(silent=false){
 }
 function directorIssueCard(issue){
  const status=directorIssueStatus(issue),due=issue.dueAt?new Date(issue.dueAt).toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'}):'期限なし';
- return `<button class="director-issue-card" onclick="openDirectorIssue('${issue.id}')"><span class="director-issue-status ${status==='未読'?'unread':status==='回答済み'?'answered':''}">${status}</span><span class="director-issue-copy"><small>${directorIssueTargetLabel(issue.targetType)}${issue.targetValue?'・'+esc(issue.targetValue):''}</small><b>${esc(issue.title)}</b><em>期限 ${due}</em></span><span class="chev">›</span></button>`;
+ return `<button class="director-issue-card" onclick="openDirectorIssue('${issue.id}')"><span class="director-issue-status ${status==='未読'||status==='期限切れ'?'unread':status==='回答済み'?'answered':''}">${status}</span><span class="director-issue-copy"><small>${directorIssueTargetLabel(issue.targetType)}${issue.targetValue?'・'+esc(issue.targetValue):''}</small><b>${esc(issue.title)}</b><em>期限 ${due}</em></span><span class="chev">›</span></button>`;
 }
+function setDirectorIssueTab(tab){state.directorIssueTab=tab;render()}
 function directorIssuesView(){
- const issues=loadDirectorIssuesLocal();
+ const all=loadDirectorIssuesLocal(),tab=state.directorIssueTab||'open';
+ const issues=all.filter(x=>tab==='open'?x.status==='open':x.status!=='open');
  return `<section class="director-page"><div class="director-page-head"><button class="settings-back" onclick="go('home')">‹</button><div><small>DIRECTOR ISSUES</small><h2>監督発議</h2><p>監督からのテーマを確認し、回答します。</p></div><button class="director-refresh" onclick="refreshDirectorIssues()">↻</button></div>
  ${canCreateDirectorIssue()?`<button class="btn primary director-create-btn" onclick="go('directorIssueCreate')">＋ 新しい発議を作成</button>`:''}
- <div class="director-issue-list">${issues.length?issues.map(directorIssueCard).join(''):'<div class="meeting-empty dark-empty"><span>📣</span><b>監督発議はまだありません</b><small>監督がテーマを発行するとここに表示されます。</small></div>'}</div></section>`;
+ <div class="director-tabs"><button class="${tab==='open'?'active':''}" onclick="setDirectorIssueTab('open')">現在 ${all.filter(x=>x.status==='open').length}</button><button class="${tab==='archive'?'active':''}" onclick="setDirectorIssueTab('archive')">過去 ${all.filter(x=>x.status!=='open').length}</button></div>
+ <div class="director-issue-list">${issues.length?issues.map(directorIssueCard).join(''):`<div class="meeting-empty dark-empty"><span>📣</span><b>${tab==='open'?'現在の発議はありません':'過去の発議はありません'}</b></div>`}</div></section>`;
 }
 function directorIssueCreateView(){
  if(!canCreateDirectorIssue()) return `<section class="director-page"><button class="back" onclick="go('directorIssues')">‹ 戻る</button><div class="meeting-empty dark-empty"><b>作成権限がありません</b></div></section>`;
@@ -899,46 +905,43 @@ async function createDirectorIssue(){
  if(!title||!body){toast('タイトルと内容を入力してください');return}
  if(!a?.cloud||!c){toast('クラウド接続が必要です');return}
  setActionBusy(button,true,'発議中…');
- try{
-  const session=await ensureCloudSession();
-  const result=await c.from('director_issues').insert({team_id:a.teamId,title,body,target_type:targetType,target_value:targetValue,due_at:dueValue?new Date(dueValue).toISOString():null,created_by:session.user.id}).select('*').single();
-  if(result.error) throw result.error;
-  await loadCloudDirectorIssues(); state.view='directorIssues'; render(); toast('監督発議を公開しました');
- }catch(error){console.error('createDirectorIssue failed',error);toast(cloudErrorMessage(error));}
- finally{setActionBusy(button,false)}
+ try{const session=await ensureCloudSession();const result=await c.from('director_issues').insert({team_id:a.teamId,title,body,target_type:targetType,target_value:targetValue,due_at:dueValue?new Date(dueValue).toISOString():null,created_by:session.user.id}).select('*').single();if(result.error)throw result.error;await loadCloudDirectorIssues();state.view='directorIssues';render();toast('監督発議を公開しました');}
+ catch(error){console.error('createDirectorIssue failed',error);toast(cloudErrorMessage(error));}finally{setActionBusy(button,false)}
 }
 async function openDirectorIssue(id){
- state.directorIssueId=id; state.view='directorIssueDetail'; render();
+ state.directorIssueId=id;state.view='directorIssueDetail';render();
  const issue=loadDirectorIssuesLocal().find(x=>x.id===id),a=loadAccount(),c=cloudClient();
- if(!issue||!a?.cloud||!c)return;
- const current=(issue.responses||[]).find(r=>r.isCurrent);
- if(current?.readAt)return;
- try{
-  const session=await ensureCloudSession();
-  const result=await c.from('director_issue_responses').upsert({issue_id:id,user_id:session.user.id,display_name:a.displayName,read_at:new Date().toISOString()},{onConflict:'issue_id,user_id'});
-  if(result.error) throw result.error; await loadCloudDirectorIssues(); render();
- }catch(error){console.error('markDirectorIssueRead failed',error)}
+ if(!issue||!a?.cloud||!c||issue.status!=='open')return;
+ const current=(issue.responses||[]).find(r=>r.isCurrent);if(current?.readAt)return;
+ try{const session=await ensureCloudSession();const result=await c.from('director_issue_responses').upsert({issue_id:id,user_id:session.user.id,display_name:a.displayName,read_at:new Date().toISOString()},{onConflict:'issue_id,user_id'});if(result.error)throw result.error;await loadCloudDirectorIssues();render();}catch(error){console.error('markDirectorIssueRead failed',error)}
 }
 function directorIssueDetailView(){
- const issue=loadDirectorIssuesLocal().find(x=>x.id===state.directorIssueId); if(!issue)return `<section class="director-page"><button class="back" onclick="go('directorIssues')">‹ 戻る</button><div class="meeting-empty dark-empty"><b>発議が見つかりません</b></div></section>`;
- const mine=(issue.responses||[]).find(r=>r.isCurrent),manager=canCreateDirectorIssue(),due=issue.dueAt?new Date(issue.dueAt).toLocaleString('ja-JP'):'期限なし';
+ const issue=loadDirectorIssuesLocal().find(x=>x.id===state.directorIssueId);if(!issue)return `<section class="director-page"><button class="back" onclick="go('directorIssues')">‹ 戻る</button><div class="meeting-empty dark-empty"><b>発議が見つかりません</b></div></section>`;
+ const mine=(issue.responses||[]).find(r=>r.isCurrent),manager=canCreateDirectorIssue(),due=issue.dueAt?new Date(issue.dueAt).toLocaleString('ja-JP'):'期限なし',expired=directorIssueExpired(issue),closed=issue.status!=='open';
  return `<section class="director-page"><div class="director-page-head"><button class="settings-back" onclick="go('directorIssues')">‹</button><div><small>${directorIssueTargetLabel(issue.targetType)}${issue.targetValue?'・'+esc(issue.targetValue):''}</small><h2>${esc(issue.title)}</h2><p>回答期限：${esc(due)}</p></div></div>
  <article class="director-detail-card"><p>${esc(issue.body).replace(/\n/g,'<br>')}</p></article>
- ${manager?directorIssueManagerResponses(issue):`<section class="settings-section-card director-answer-card"><div class="settings-section-title"><h3>あなたの回答</h3><p>自分の考えを言葉にしてください。</p></div><textarea id="directorAnswer" class="input" rows="7" maxlength="1500" placeholder="ここに回答を入力">${esc(mine?.answer||'')}</textarea><button id="directorAnswerButton" class="btn primary" onclick="saveDirectorIssueAnswer()">${mine?.answer?'回答を更新':'回答する'}</button></section>`}
- </section>`;
+ ${manager?directorIssueManagerResponses(issue):closed||expired?`<section class="settings-section-card director-closed"><b>${closed?'受付終了':'回答期限を過ぎました'}</b>${mine?.answer?`<p>あなたの回答：${esc(mine.answer)}</p>`:''}${mine?.managerComment?`<p class="manager-comment-view">監督コメント：${esc(mine.managerComment)}</p>`:''}</section>`:`<section class="settings-section-card director-answer-card"><div class="settings-section-title"><h3>あなたの回答</h3><p>自分の考えを言葉にしてください。</p></div><textarea id="directorAnswer" class="input" rows="7" maxlength="1500" placeholder="ここに回答を入力">${esc(mine?.answer||'')}</textarea><button id="directorAnswerButton" class="btn primary" onclick="saveDirectorIssueAnswer()">${mine?.answer?'回答を更新':'回答する'}</button>${mine?.managerComment?`<p class="manager-comment-view">監督コメント：${esc(mine.managerComment)}</p>`:''}</section>`}
+ ${manager&&issue.status==='open'?`<button class="btn secondary director-archive-btn" onclick="archiveDirectorIssue()">この発議を終了・過去へ移動</button>`:''}</section>`;
 }
 function directorIssueManagerResponses(issue){
  const members=currentTeamMembers(),responses=issue.responses||[];
- const rows=members.map(m=>{const r=responses.find(x=>x.userId===m.userId);const status=r?.answer?'回答済み':r?.readAt?'既読':'未読';return `<article class="director-response-row"><span class="director-response-avatar">${esc((m.displayName||'?').slice(0,1))}</span><div><b>${esc(m.displayName)}</b><small>${esc(m.role||'選手')}・${status}</small>${r?.answer?`<p>${esc(r.answer)}</p>`:''}</div><em class="${status==='未読'?'unread':''}">${status}</em></article>`}).join('');
+ const rows=members.map(m=>{const r=responses.find(x=>x.userId===m.userId),status=r?.answer?'回答済み':r?.readAt?'既読':'未読';return `<details class="director-response-row ${status==='未読'?'is-unread':''}"><summary><span class="director-response-avatar">${esc((m.displayName||'?').slice(0,1))}</span><div><b>${esc(m.displayName)}</b><small>${esc(m.role||'選手')}・${status}</small></div><em class="${status==='未読'?'unread':''}">${status}</em></summary><div class="director-response-detail">${r?.answer?`<p>${esc(r.answer).replace(/\n/g,'<br>')}</p><label>監督コメント<textarea id="comment_${r.id}" class="input" rows="3" maxlength="500">${esc(r.managerComment||'')}</textarea></label><button class="btn secondary" onclick="saveDirectorResponseComment('${r.id}')">コメント保存</button>`:`<p class="no-answer">まだ回答はありません。</p>`}</div></details>`}).join('');
  return `<section class="settings-section-card"><div class="settings-section-title"><h3>回答状況</h3><p>${responses.filter(r=>r.answer).length} / ${members.length}人 回答済み</p></div><div class="director-response-list">${rows}</div></section>`;
+}
+async function saveDirectorResponseComment(responseId){
+ const c=cloudClient(),value=document.getElementById(`comment_${responseId}`)?.value.trim()||'';if(!c)return;
+ try{const result=await c.from('director_issue_responses').update({manager_comment:value}).eq('id',responseId);if(result.error)throw result.error;await loadCloudDirectorIssues();render();toast('コメントを保存しました');}catch(error){console.error('saveDirectorResponseComment failed',error);toast(cloudErrorMessage(error))}
+}
+async function archiveDirectorIssue(){
+ const c=cloudClient(),issue=loadDirectorIssuesLocal().find(x=>x.id===state.directorIssueId);if(!c||!issue||!confirm('この発議を終了して過去へ移動しますか？'))return;
+ try{const result=await c.from('director_issues').update({status:'archived'}).eq('id',issue.id);if(result.error)throw result.error;await loadCloudDirectorIssues();state.directorIssueTab='archive';state.view='directorIssues';render();toast('発議を過去へ移動しました');}catch(error){console.error('archiveDirectorIssue failed',error);toast(cloudErrorMessage(error))}
 }
 async function saveDirectorIssueAnswer(){
  const issue=loadDirectorIssuesLocal().find(x=>x.id===state.directorIssueId),a=loadAccount(),c=cloudClient(),button=document.getElementById('directorAnswerButton'),answer=document.getElementById('directorAnswer')?.value.trim()||'';
- if(!issue||!a?.cloud||!c)return; if(!answer){toast('回答を入力してください');return}
+ if(!issue||!a?.cloud||!c)return;if(issue.status!=='open'||directorIssueExpired(issue)){toast('回答受付は終了しています');render();return}if(!answer){toast('回答を入力してください');return}
  setActionBusy(button,true,'保存中…');
- try{const session=await ensureCloudSession();const now=new Date().toISOString();const result=await c.from('director_issue_responses').upsert({issue_id:issue.id,user_id:session.user.id,display_name:a.displayName,answer,read_at:now,answered_at:now},{onConflict:'issue_id,user_id'}).select('*').single();if(result.error)throw result.error;await loadCloudDirectorIssues();render();toast('回答を保存しました');}
- catch(error){console.error('saveDirectorIssueAnswer failed',error);toast(cloudErrorMessage(error));}
- finally{setActionBusy(button,false)}
+ try{const session=await ensureCloudSession(),now=new Date().toISOString(),result=await c.from('director_issue_responses').upsert({issue_id:issue.id,user_id:session.user.id,display_name:a.displayName,answer,read_at:now,answered_at:now},{onConflict:'issue_id,user_id'}).select('*').single();if(result.error)throw result.error;await loadCloudDirectorIssues();render();toast('回答を保存しました');}
+ catch(error){console.error('saveDirectorIssueAnswer failed',error);toast(cloudErrorMessage(error));}finally{setActionBusy(button,false)}
 }
 function homeView(){
   const a=loadAccount();
@@ -1388,7 +1391,7 @@ async function deleteMember(id){
 function menuView(){
  const a=loadAccount();
  return `<section class="menu-page menu-hub-page">
-   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.52.0" alt="Alia"></div>
+   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.52.1" alt="Alia"></div>
    <div class="menu-hub-grid">
      ${menuHubItem('👥','チーム情報','チーム名・学校名・カテゴリー・レベル',"go('teamInfo')",'pink')}
      ${menuHubItem('👤','マイプロフィール','名前・役割・ポジション・学年',"go('myProfile')",'pink')}
@@ -1486,7 +1489,7 @@ function helpView(){
 }
 function appInfoView(){
  return `<section class="settings-detail-page">${menuBack('アプリ情報','ABOUT')}
- ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.52.0</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
+ ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.52.1</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
  ${settingsCard('情報','',`<button class="settings-menu-row" onclick="toast('更新履歴は準備中です')"><span><b>更新履歴</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('利用規約は準備中です')"><span><b>利用規約</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('プライバシーポリシーは準備中です')"><span><b>プライバシーポリシー</b></span><em>›</em></button>`)}
  </section>`;
 }
@@ -1552,7 +1555,7 @@ function saveDisplaySettings(){
  toast('表示設定を保存しました');
 }
 function exportTeamData(){
- const data={version:'0.52.0',exportedAt:new Date().toISOString(),localStorage:{}};
+ const data={version:'0.52.1',exportedAt:new Date().toISOString(),localStorage:{}};
  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); if(k&&k.startsWith('teamTheory')) data.localStorage[k]=localStorage.getItem(k)}
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`TEAM_Theory_backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); toast('バックアップを書き出しました');
 }
@@ -1808,7 +1811,7 @@ if ('serviceWorker' in navigator) {
     refreshing = true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=0.52.0', { updateViaCache: 'none' })
+  navigator.serviceWorker.register('./sw.js?v=0.52.1', { updateViaCache: 'none' })
     .then(reg => {
       reg.update().catch(()=>{});
       setInterval(() => reg.update().catch(()=>{}), 60 * 1000);
