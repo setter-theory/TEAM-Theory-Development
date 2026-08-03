@@ -360,12 +360,70 @@ async function loadCloudAccounts(){
   }
   return accounts;
 }
+async function loadCloudTeamMembers(teamId=loadAccount()?.teamId){
+  const c=cloudClient();
+  if(!c || !teamId) return [];
+  await ensureCloudSession();
+  const result=await c.from('team_members')
+    .select('id,team_id,user_id,display_name,role,position,grade,status,joined_at,number,dominant_hand,captain_role')
+    .eq('team_id',teamId)
+    .eq('status','active')
+    .order('joined_at',{ascending:true});
+  if(result.error) throw result.error;
+  const currentUser=(await c.auth.getUser()).data.user;
+  const cloudMembers=(result.data||[]).map(row=>({
+    id:row.id,
+    cloudId:row.id,
+    teamId:row.team_id,
+    userId:row.user_id,
+    displayName:row.display_name,
+    role:row.role||'選手',
+    position:row.position||'未設定',
+    grade:row.grade||'未設定',
+    number:row.number||'',
+    dominantHand:row.dominant_hand||'未設定',
+    captainRole:row.captain_role||'なし',
+    createdAt:row.joined_at?new Date(row.joined_at).getTime():Date.now(),
+    isCurrent:row.user_id===currentUser?.id,
+    cloud:true
+  }));
+  const all=loadMembers().filter(m=>m.teamId!==teamId || (!m.cloud && !m.userId));
+  saveMembers([...all,...cloudMembers]);
+  return cloudMembers;
+}
+async function saveCloudMember(member){
+  const c=cloudClient();
+  const a=loadAccount();
+  if(!c || !a?.cloud || !member?.cloudId) return null;
+  await ensureCloudSession();
+  const result=await c.from('team_members').update({
+    display_name:member.displayName,
+    role:member.role,
+    position:member.position||'未設定',
+    grade:member.grade||'未設定',
+    number:member.number||'',
+    dominant_hand:member.dominantHand||'未設定',
+    captain_role:member.captainRole||'なし'
+  }).eq('id',member.cloudId).select('*').single();
+  if(result.error) throw result.error;
+  return result.data;
+}
+async function deleteCloudMember(member){
+  const c=cloudClient();
+  const a=loadAccount();
+  if(!c || !a?.cloud || !member?.cloudId) return;
+  await ensureCloudSession();
+  const result=await c.from('team_members').update({status:'inactive'}).eq('id',member.cloudId);
+  if(result.error) throw result.error;
+}
+
 async function initializeCloud(){
   if(!cloudConfigured()) return;
   try{
     await ensureCloudSession();
     const before=JSON.stringify(loadAccounts());
     await loadCloudAccounts();
+    await loadCloudTeamMembers();
     if(JSON.stringify(loadAccounts())!==before) render();
     console.info('TEAM Theory cloud ready');
   }catch(error){
@@ -550,7 +608,7 @@ function welcomeView(){
          <p class="alia-tagline">教わるから、考えるへ。</p>
        </div>
      </div>
-     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.50.2" alt="Alia">
+     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.50.3" alt="Alia">
    </div>
    ${savedTeamsView()}
    <div class="welcome-actions">
@@ -559,7 +617,7 @@ function welcomeView(){
    </div>
    <button class="welcome-utility" onclick="showTopSettingsNotice()"><span class="welcome-utility-icon">⚙</span><span>設定・その他</span><span class="welcome-utility-arrow">›</span></button>
    <div class="alia-support">♥ Aliaがチームの成長をサポートするよ！ ♥</div>
-   <div class="welcome-version">Version 0.50.2</div>
+   <div class="welcome-version">Version 0.50.3</div>
  </main>`;
 }
 function savedTeamsView(){
@@ -585,7 +643,7 @@ function createTeamView(){
      <div class="create-field"><label class="create-label"><span class="create-label-icon shield-icon">✦</span><span>役割</span></label><select id="role" class="input create-input create-select">${roleOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🏐</span><span>ポジション</span></label><select id="position" class="input create-input create-select">${positionOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🎓</span><span>学年</span></label><select id="grade" class="input create-input create-select">${gradeOptions()}</select></div>
-     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.50.2" class="create-alia" alt="Alia"></div>
+     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.50.3" class="create-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions create-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon home-svg">⌂</span><span>トップ</span></button><button class="bottom-action primary-action" onclick="createTeamAccount()"><span>チームを作成する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -600,7 +658,7 @@ function joinTeamView(){
      <div class="join-field"><label class="join-label"><span class="join-label-icon shield-icon">★</span><span>参加時の役割</span></label><div class="input join-input" style="display:flex;align-items:center">選手</div><small class="join-help">監督・コーチ・マネージャーへの変更は、チーム管理から行います。</small></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🏐</span><span>ポジション</span></label><select id="joinPosition" class="input join-input join-select">${positionOptions()}</select></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🎓</span><span>学年</span></label><select id="joinGrade" class="input join-input join-select">${gradeOptions()}</select></div>
-     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.50.2" class="join-alia" alt="Alia"></div>
+     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.50.3" class="join-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions join-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon">⌂</span><span>トップ</span></button><button class="bottom-action join-action" onclick="joinTeamAccount()"><span>参加する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -690,6 +748,7 @@ async function joinTeamAccount(){
     const t=teamResult.data,m=memberResult.data,now=Date.now();
     const account={teamId:t.id,inviteCode:t.invite_code,teamName:t.name,schoolName:t.school_name||'',category:t.category||'未設定',teamLevel:t.team_level||'未設定',displayName:m.display_name,role:m.role||'選手',position:m.position||'未設定',grade:m.grade||'未設定',createdAt:t.created_at?new Date(t.created_at).getTime():now,joinedAt:m.joined_at?new Date(m.joined_at).getTime():now,isOwner:false,cloud:true};
     saveAccount(account); upsertLocalMemberFromAccount(account);
+    await loadCloudTeamMembers(account.teamId);
     state.selectedType=null; state.selectedGroup=null; state.currentMeetingId=null; state.view='home';
     render(); toast(`「${account.teamName}」に参加しました`);
   }catch(error){
@@ -997,7 +1056,7 @@ function membersView(){
   const members=currentTeamMembers();
   const manage=canManageMembers();
   return `<section class="members-page"><div class="members-head"><small>TEAM MEMBERS</small><h2>メンバー管理</h2><p>${esc(a.teamName)}・${members.length}人</p></div>
-  ${manage?`<button class="btn primary member-add-btn" onclick="openMemberEditor()">＋ メンバーを追加</button>`:''}
+  <div class="member-toolbar">${manage?`<button class="btn primary member-add-btn" onclick="openMemberEditor()">＋ メンバーを追加</button>`:''}<button class="btn secondary member-refresh-btn" onclick="refreshCloudMembers()">↻ 最新情報</button></div>
   <div class="members-list">${members.map(m=>`<article class="member-card"><span class="member-avatar">${esc((m.displayName||'?').slice(0,1))}</span><div class="member-info"><b>${esc(m.displayName)}${m.number?` <em>#${esc(m.number)}</em>`:''}</b><small>${esc(m.role)}・${esc(m.position||'未設定')}・${esc(m.grade||'未設定')}・${esc(m.dominantHand||'未設定')}利き</small>${m.captainRole&&m.captainRole!=='なし'?`<span class="member-badge">${esc(m.captainRole)}</span>`:''}</div>${manage?`<button class="member-edit" onclick="openMemberEditor('${m.id}')">編集</button>`:''}</article>`).join('')||'<div class="members-note">メンバーを追加してください。</div>'}</div>
   <div class="members-note">登録情報はAlia Adviceのポジション・学年別提案と、成長分析に利用します。</div></section>`;
 }
@@ -1007,17 +1066,45 @@ function openMemberEditor(id=''){
  document.body.insertAdjacentHTML('beforeend',html);
 }
 function closeMemberEditor(){document.querySelector('.member-modal-backdrop')?.remove()}
-function saveMemberEditor(id=''){
- const name=document.getElementById('memberName').value.trim();if(!name){toast('名前を入力してください');return}
- const a=loadAccount();const all=loadMembers();const data={id:id||uid('mem'),teamId:a.teamId,displayName:name,role:document.getElementById('memberRole').value,position:document.getElementById('memberPosition').value,grade:document.getElementById('memberGrade').value,number:document.getElementById('memberNumber').value.trim(),dominantHand:document.getElementById('memberHand').value,captainRole:document.getElementById('memberCaptain').value,createdAt:Date.now()};
- const i=all.findIndex(m=>m.id===id);if(i>=0)all[i]={...all[i],...data};else all.push(data);saveMembers(all);closeMemberEditor();render();toast('メンバー情報を保存しました');
+async function refreshCloudMembers(){
+ try{
+  await loadCloudTeamMembers();
+  render();
+  toast('メンバー情報を更新しました');
+ }catch(error){console.error('refreshCloudMembers failed',error);toast(cloudErrorMessage(error))}
 }
-function deleteMember(id){if(!confirm('このメンバーを削除しますか？'))return;saveMembers(loadMembers().filter(m=>m.id!==id));closeMemberEditor();render();toast('メンバーを削除しました')}
+async function saveMemberEditor(id=''){
+ const name=document.getElementById('memberName').value.trim();if(!name){toast('名前を入力してください');return}
+ const a=loadAccount();const all=loadMembers();const existing=all.find(m=>m.id===id);
+ const data={id:id||uid('mem'),cloudId:existing?.cloudId||'',userId:existing?.userId||'',teamId:a.teamId,displayName:name,role:document.getElementById('memberRole').value,position:document.getElementById('memberPosition').value,grade:document.getElementById('memberGrade').value,number:document.getElementById('memberNumber').value.trim(),dominantHand:document.getElementById('memberHand').value,captainRole:document.getElementById('memberCaptain').value,createdAt:existing?.createdAt||Date.now(),cloud:!!existing?.cloud};
+ try{
+  if(a.cloud){
+   if(!existing?.cloudId){toast('クラウド参加者は招待コードから追加してください');return}
+   await saveCloudMember(data);
+  }
+  const i=all.findIndex(m=>m.id===id);if(i>=0)all[i]={...all[i],...data};else all.push(data);saveMembers(all);
+  if(existing?.isCurrent){
+   const account={...a,displayName:data.displayName,role:data.role,position:data.position,grade:data.grade};
+   saveAccount(account);
+  }
+  closeMemberEditor();render();toast('メンバー情報を保存しました');
+ }catch(error){console.error('saveMemberEditor failed',error);toast(cloudErrorMessage(error))}
+}
+async function deleteMember(id){
+ const member=currentTeamMembers().find(m=>m.id===id);if(!member)return;
+ if(member.isCurrent){toast('自分自身は削除できません');return}
+ if(!confirm('このメンバーをチームから外しますか？'))return;
+ try{
+  await deleteCloudMember(member);
+  saveMembers(loadMembers().filter(m=>m.id!==id));closeMemberEditor();render();toast('メンバーをチームから外しました');
+ }catch(error){console.error('deleteMember failed',error);toast(cloudErrorMessage(error))}
+}
+
 
 function menuView(){
  const a=loadAccount();
  return `<section class="menu-page menu-hub-page">
-   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.50.2" alt="Alia"></div>
+   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.50.3" alt="Alia"></div>
    <div class="menu-hub-grid">
      ${menuHubItem('👥','チーム情報','チーム名・学校名・カテゴリー・レベル',"go('teamInfo')",'pink')}
      ${menuHubItem('👤','マイプロフィール','名前・役割・ポジション・学年',"go('myProfile')",'pink')}
@@ -1108,7 +1195,7 @@ function helpView(){
 }
 function appInfoView(){
  return `<section class="settings-detail-page">${menuBack('アプリ情報','ABOUT')}
- ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.50.2</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
+ ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.50.3</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
  ${settingsCard('情報','',`<button class="settings-menu-row" onclick="toast('更新履歴は準備中です')"><span><b>更新履歴</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('利用規約は準備中です')"><span><b>利用規約</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('プライバシーポリシーは準備中です')"><span><b>プライバシーポリシー</b></span><em>›</em></button>`)}
  </section>`;
 }
@@ -1120,16 +1207,18 @@ function saveTeamInfo(){
  a.teamLevel=document.getElementById('teamInfoLevel')?.value||'未設定';
  saveAccount(a); toast('チーム情報を保存しました'); render();
 }
-function saveMyProfile(){
+async function saveMyProfile(){
  const a=loadAccount();
- a.displayName=document.getElementById('myProfileName')?.value.trim()||a.displayName;
- a.role=document.getElementById('myProfileRole')?.value||a.role;
- a.position=document.getElementById('myProfilePosition')?.value||'未設定';
- a.grade=document.getElementById('myProfileGrade')?.value||'未設定';
- saveAccount(a);
+ const next={...a};
+ next.displayName=document.getElementById('myProfileName')?.value.trim()||a.displayName;
+ next.role=document.getElementById('myProfileRole')?.value||a.role;
+ next.position=document.getElementById('myProfilePosition')?.value||'未設定';
+ next.grade=document.getElementById('myProfileGrade')?.value||'未設定';
  const members=loadMembers(); const me=members.find(m=>m.teamId===a.teamId&&m.isCurrent);
- if(me){Object.assign(me,{displayName:a.displayName,role:a.role,position:a.position,grade:a.grade});saveMembers(members)}
- toast('プロフィールを保存しました'); render();
+ try{
+  if(me){Object.assign(me,{displayName:next.displayName,role:next.role,position:next.position,grade:next.grade});if(a.cloud)await saveCloudMember(me);saveMembers(members)}
+  saveAccount(next);toast('プロフィールを保存しました');render();
+ }catch(error){console.error('saveMyProfile failed',error);toast(cloudErrorMessage(error))}
 }
 function saveAliaSettings(){
  saveUiPrefs({aliaLevel:document.getElementById('aliaLevel')?.value||'標準',aliaDetail:document.getElementById('aliaDetail')?.value||'標準',aliaNotify:!!document.getElementById('aliaNotify')?.checked});
@@ -1140,7 +1229,7 @@ function saveDisplaySettings(){
  toast('表示設定を保存しました');
 }
 function exportTeamData(){
- const data={version:'0.50.2',exportedAt:new Date().toISOString(),localStorage:{}};
+ const data={version:'0.50.3',exportedAt:new Date().toISOString(),localStorage:{}};
  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); if(k&&k.startsWith('teamTheory')) data.localStorage[k]=localStorage.getItem(k)}
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`TEAM_Theory_backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); toast('バックアップを書き出しました');
 }
@@ -1396,7 +1485,7 @@ if ('serviceWorker' in navigator) {
     refreshing = true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=0.50.2', { updateViaCache: 'none' })
+  navigator.serviceWorker.register('./sw.js?v=0.50.3', { updateViaCache: 'none' })
     .then(reg => {
       reg.update().catch(()=>{});
       setInterval(() => reg.update().catch(()=>{}), 60 * 1000);
