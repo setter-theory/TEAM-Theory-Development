@@ -694,6 +694,7 @@ function render(){
   else if(state.view==='home') app.innerHTML=shell(homeView(),'home');
   else if(state.view==='directorIssues') app.innerHTML=shell(directorIssuesView(),'home');
   else if(state.view==='directorIssueCreate') app.innerHTML=shell(directorIssueCreateView(),'home');
+  else if(state.view==='directorIssueEdit') app.innerHTML=shell(directorIssueEditView(),'home');
   else if(state.view==='directorIssueDetail') app.innerHTML=shell(directorIssueDetailView(),'home');
   else if(state.view==='notifications') app.innerHTML=shell(notificationCenterView(),'home');
   else if(state.view==='directorDashboard') app.innerHTML=shell(directorDashboardView(),'home');
@@ -753,7 +754,7 @@ function welcomeView(){
          <p class="alia-tagline">教わるから、考えるへ。</p>
        </div>
      </div>
-     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.54.3" alt="Alia">
+     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.54.4" alt="Alia">
    </div>
    ${savedTeamsView()}
    <div class="welcome-actions">
@@ -762,7 +763,7 @@ function welcomeView(){
    </div>
    <button class="welcome-utility" onclick="showTopSettingsNotice()"><span class="welcome-utility-icon">⚙</span><span>設定・その他</span><span class="welcome-utility-arrow">›</span></button>
    <div class="alia-support">♥ Aliaがチームの成長をサポートするよ！ ♥</div>
-   <div class="welcome-version">Version 0.54.3</div>
+   <div class="welcome-version">Version 0.54.4</div>
  </main>`;
 }
 function savedTeamsView(){
@@ -788,7 +789,7 @@ function createTeamView(){
      <div class="create-field"><label class="create-label"><span class="create-label-icon shield-icon">✦</span><span>役割</span></label><select id="role" class="input create-input create-select">${roleOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🏐</span><span>ポジション</span></label><select id="position" class="input create-input create-select">${positionOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🎓</span><span>学年</span></label><select id="grade" class="input create-input create-select">${gradeOptions()}</select></div>
-     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.54.3" class="create-alia" alt="Alia"></div>
+     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.54.4" class="create-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions create-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon home-svg">⌂</span><span>トップ</span></button><button class="bottom-action primary-action" onclick="createTeamAccount()"><span>チームを作成する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -803,7 +804,7 @@ function joinTeamView(){
      <div class="join-field"><label class="join-label"><span class="join-label-icon shield-icon">★</span><span>参加時の役割</span></label><div class="input join-input join-role-fixed" aria-readonly="true"><span>選手</span><small>固定</small></div><small class="join-help">安全のため参加時は「選手」で登録されます。監督・コーチ・マネージャーへの変更は、参加後に監督が行います。</small></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🏐</span><span>ポジション</span></label><select id="joinPosition" class="input join-input join-select">${positionOptions()}</select></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🎓</span><span>学年</span></label><select id="joinGrade" class="input join-input join-select">${gradeOptions()}</select></div>
-     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.54.3" class="join-alia" alt="Alia"></div>
+     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.54.4" class="join-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions join-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon">⌂</span><span>トップ</span></button><button class="bottom-action join-action" onclick="joinTeamAccount()"><span>参加する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -914,6 +915,20 @@ function canCreateDirectorIssue(){
  return !!a && (a.isOwner===true || ['監督','コーチ'].includes(a.role||''));
 }
 function directorIssueTargetLabel(v){ return ({all:'全体',grade:'学年別',position:'ポジション別'})[v]||'全体'; }
+function canEditDirectorIssue(issue){
+ const a=loadAccount(),me=currentTeamMembers().find(m=>m.isCurrent),role=me?.role||a?.role||'';
+ return !!issue && (a?.isOwner===true || ['監督','コーチ'].includes(role));
+}
+function canDeleteDirectorIssue(issue){
+ const a=loadAccount(),me=currentTeamMembers().find(m=>m.isCurrent),role=me?.role||a?.role||'',userId=currentCloudUserId();
+ return !!issue && (a?.isOwner===true || role==='監督' || (!!userId && String(issue.createdBy||'')===userId));
+}
+function directorDateTimeLocal(value){
+ if(!value)return '';
+ const d=new Date(value); if(Number.isNaN(d.getTime()))return '';
+ const local=new Date(d.getTime()-d.getTimezoneOffset()*60000);
+ return local.toISOString().slice(0,16);
+}
 function directorIssueExpired(issue){ return !!issue.dueAt && Date.now()>new Date(issue.dueAt).getTime(); }
 function directorIssueStatus(issue){
  if(issue.status!=='open') return '終了';
@@ -1044,11 +1059,32 @@ function directorIssueCreateView(){
   <label class="settings-field"><span>回答期限</span><input id="directorDueAt" class="input" type="datetime-local" value="${tomorrow.toISOString().slice(0,16)}"></label>
  </section><div class="settings-actions"><button class="btn secondary" onclick="go('directorIssues')">キャンセル</button><button id="directorCreateButton" class="btn primary" onclick="createDirectorIssue()">発議する</button></div></section>`;
 }
-function renderDirectorTargetValue(){
+function renderDirectorTargetValue(selectedValue=''){
  const type=document.getElementById('directorTargetType')?.value||'all',wrap=document.getElementById('directorTargetValueWrap'); if(!wrap)return;
- if(type==='grade') wrap.innerHTML=`<label class="settings-field"><span>対象学年</span><select id="directorTargetValue" class="input">${optionList(['1年','2年','3年'],'1年')}</select></label>`;
- else if(type==='position') wrap.innerHTML=`<label class="settings-field"><span>対象ポジション</span><select id="directorTargetValue" class="input">${optionList(POSITIONS.filter(x=>x!=='未設定'),'セッター')}</select></label>`;
+ if(type==='grade') wrap.innerHTML=`<label class="settings-field"><span>対象学年</span><select id="directorTargetValue" class="input">${optionList(['1年','2年','3年'],selectedValue||'1年')}</select></label>`;
+ else if(type==='position') wrap.innerHTML=`<label class="settings-field"><span>対象ポジション</span><select id="directorTargetValue" class="input">${optionList(POSITIONS.filter(x=>x!=='未設定'),selectedValue||'セッター')}</select></label>`;
  else wrap.innerHTML='';
+}
+function directorIssueEditView(){
+ const issue=loadDirectorIssuesLocal().find(x=>x.id===state.directorIssueId);
+ if(!issue||!canEditDirectorIssue(issue)) return `<section class="director-page"><button class="back" onclick="go('directorIssues')">‹ 戻る</button><div class="meeting-empty dark-empty"><b>編集権限がありません</b></div></section>`;
+ return `<section class="director-page"><div class="director-page-head"><button class="settings-back" onclick="go('directorIssueDetail')">‹</button><div><small>EDIT ISSUE</small><h2>監督発議を編集</h2><p>タイトル・内容・対象・回答期限を変更します。</p></div></div>
+ <section class="settings-section-card director-form">
+  <label class="settings-field"><span>タイトル</span><input id="directorTitle" class="input" maxlength="80" value="${esc(issue.title)}"></label>
+  <label class="settings-field"><span>内容・問いかけ</span><textarea id="directorBody" class="input" rows="6" maxlength="1000">${esc(issue.body||'')}</textarea></label>
+  <label class="settings-field"><span>対象</span><select id="directorTargetType" class="input" onchange="renderDirectorTargetValue()"><option value="all" ${issue.targetType==='all'?'selected':''}>全体</option><option value="grade" ${issue.targetType==='grade'?'selected':''}>学年別</option><option value="position" ${issue.targetType==='position'?'selected':''}>ポジション別</option></select></label>
+  <div id="directorTargetValueWrap">${issue.targetType==='grade'?`<label class="settings-field"><span>対象学年</span><select id="directorTargetValue" class="input">${optionList(['1年','2年','3年'],issue.targetValue||'1年')}</select></label>`:issue.targetType==='position'?`<label class="settings-field"><span>対象ポジション</span><select id="directorTargetValue" class="input">${optionList(POSITIONS.filter(x=>x!=='未設定'),issue.targetValue||'セッター')}</select></label>`:''}</div>
+  <label class="settings-field"><span>回答期限</span><input id="directorDueAt" class="input" type="datetime-local" value="${directorDateTimeLocal(issue.dueAt)}"></label>
+ </section><div class="settings-actions"><button class="btn secondary" onclick="go('directorIssueDetail')">キャンセル</button><button id="directorUpdateButton" class="btn primary" onclick="updateDirectorIssue()">変更を保存</button></div></section>`;
+}
+async function updateDirectorIssue(){
+ const issue=loadDirectorIssuesLocal().find(x=>x.id===state.directorIssueId),c=cloudClient(),button=document.getElementById('directorUpdateButton');
+ if(!issue||!c||!canEditDirectorIssue(issue)){toast('編集権限がありません');return}
+ const title=document.getElementById('directorTitle')?.value.trim()||'',body=document.getElementById('directorBody')?.value.trim()||'',targetType=document.getElementById('directorTargetType')?.value||'all',targetValue=document.getElementById('directorTargetValue')?.value||'',dueValue=document.getElementById('directorDueAt')?.value||'';
+ if(!title||!body){toast('タイトルと内容を入力してください');return}
+ setActionBusy(button,true,'保存中…');
+ try{const result=await c.from('director_issues').update({title,body,target_type:targetType,target_value:targetValue,due_at:dueValue?new Date(dueValue).toISOString():null}).eq('id',issue.id);if(result.error)throw result.error;await loadCloudDirectorIssues();state.view='directorIssueDetail';render();toast('発議を更新しました');}
+ catch(error){console.error('updateDirectorIssue failed',error);toast(cloudErrorMessage(error));}finally{setActionBusy(button,false)}
 }
 async function createDirectorIssue(){
  const a=loadAccount(),c=cloudClient(),button=document.getElementById('directorCreateButton');
@@ -1073,7 +1109,7 @@ function directorIssueDetailView(){
  return `<section class="director-page"><div class="director-page-head"><button class="settings-back" onclick="go('directorIssues')">‹</button><div><small>${directorIssueTargetLabel(issue.targetType)}${issue.targetValue?'・'+esc(issue.targetValue):''}</small><h2>${esc(issue.title)}</h2><p>回答期限：${esc(due)}</p></div></div>
  <article class="director-detail-card"><p>${esc(issue.body).replace(/\n/g,'<br>')}</p></article>
  ${manager?directorIssueManagerResponses(issue):closed||expired?`<section class="settings-section-card director-closed"><b>${closed?'受付終了':'回答期限を過ぎました'}</b>${mine?.answer?`<p>あなたの回答：${esc(mine.answer)}</p>`:''}${mine?.managerComment?`<p class="manager-comment-view">監督コメント：${esc(mine.managerComment)}</p>`:''}</section>`:`<section class="settings-section-card director-answer-card"><div class="settings-section-title"><h3>あなたの回答</h3><p>自分の考えを言葉にしてください。</p></div><textarea id="directorAnswer" class="input" rows="7" maxlength="1500" placeholder="ここに回答を入力">${esc(mine?.answer||'')}</textarea><button id="directorAnswerButton" class="btn primary" onclick="saveDirectorIssueAnswer()">${mine?.answer?'回答を更新':'回答する'}</button>${mine?.managerComment?`<p class="manager-comment-view">監督コメント：${esc(mine.managerComment)}</p>`:''}</section>`}
- ${manager&&issue.status==='open'?`<button class="btn secondary director-archive-btn" onclick="archiveDirectorIssue()">この発議を終了・過去へ移動</button>`:''}</section>`;
+ ${manager?`<div class="director-management-actions">${canEditDirectorIssue(issue)?`<button class="btn secondary" onclick="state.view='directorIssueEdit';render()">編集</button>`:''}${issue.status==='open'&&canEditDirectorIssue(issue)?`<button class="btn secondary director-archive-btn" onclick="archiveDirectorIssue()">終了して履歴へ</button>`:issue.status!=='open'&&canEditDirectorIssue(issue)?`<button class="btn secondary" onclick="reopenDirectorIssue()">発議を再開</button>`:''}${canDeleteDirectorIssue(issue)?`<button class="btn danger" onclick="deleteDirectorIssue()">完全削除</button>`:''}</div>`:''}</section>`;
 }
 function directorIssueManagerResponses(issue){
  const members=currentTeamMembers(),responses=issue.responses||[];
@@ -1085,8 +1121,16 @@ async function saveDirectorResponseComment(responseId){
  try{const result=await c.from('director_issue_responses').update({manager_comment:value}).eq('id',responseId);if(result.error)throw result.error;await loadCloudDirectorIssues();render();toast('コメントを保存しました');}catch(error){console.error('saveDirectorResponseComment failed',error);toast(cloudErrorMessage(error))}
 }
 async function archiveDirectorIssue(){
- const c=cloudClient(),issue=loadDirectorIssuesLocal().find(x=>x.id===state.directorIssueId);if(!c||!issue||!confirm('この発議を終了して過去へ移動しますか？'))return;
+ const c=cloudClient(),issue=loadDirectorIssuesLocal().find(x=>x.id===state.directorIssueId);if(!c||!issue||!canEditDirectorIssue(issue)){toast('終了する権限がありません');return}if(!confirm('この発議を終了して過去へ移動しますか？'))return;
  try{const result=await c.from('director_issues').update({status:'archived'}).eq('id',issue.id);if(result.error)throw result.error;await loadCloudDirectorIssues();state.directorIssueTab='archive';state.view='directorIssues';render();toast('発議を過去へ移動しました');}catch(error){console.error('archiveDirectorIssue failed',error);toast(cloudErrorMessage(error))}
+}
+async function reopenDirectorIssue(){
+ const c=cloudClient(),issue=loadDirectorIssuesLocal().find(x=>x.id===state.directorIssueId);if(!c||!issue||!canEditDirectorIssue(issue)){toast('再開する権限がありません');return}if(!confirm('この発議を再開して「現在」に戻しますか？'))return;
+ try{const result=await c.from('director_issues').update({status:'open'}).eq('id',issue.id);if(result.error)throw result.error;await loadCloudDirectorIssues();state.directorIssueTab='open';state.view='directorIssues';render();toast('発議を再開しました');}catch(error){console.error('reopenDirectorIssue failed',error);toast(cloudErrorMessage(error))}
+}
+async function deleteDirectorIssue(){
+ const c=cloudClient(),issue=loadDirectorIssuesLocal().find(x=>x.id===state.directorIssueId);if(!c||!issue||!canDeleteDirectorIssue(issue)){toast('削除する権限がありません');return}if(!confirm(`発議「${issue.title}」を完全に削除しますか？\n\n回答と監督コメントも削除され、元に戻せません。`))return;
+ try{const result=await c.from('director_issues').delete().eq('id',issue.id);if(result.error)throw result.error;await loadCloudDirectorIssues();state.directorIssueId=null;state.view='directorIssues';render();toast('発議を完全削除しました');}catch(error){console.error('deleteDirectorIssue failed',error);toast(cloudErrorMessage(error))}
 }
 async function saveDirectorIssueAnswer(){
  const issue=loadDirectorIssuesLocal().find(x=>x.id===state.directorIssueId),a=loadAccount(),c=cloudClient(),button=document.getElementById('directorAnswerButton'),answer=document.getElementById('directorAnswer')?.value.trim()||'';
@@ -1574,7 +1618,7 @@ async function deleteMember(id){
 function menuView(){
  const a=loadAccount();
  return `<section class="menu-page menu-hub-page">
-   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.54.3" alt="Alia"></div>
+   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.54.4" alt="Alia"></div>
    <div class="menu-hub-grid">
      ${menuHubItem('👥','チーム情報','チーム名・学校名・カテゴリー・レベル',"go('teamInfo')",'pink')}
      ${menuHubItem('👤','マイプロフィール','名前・役割・ポジション・学年',"go('myProfile')",'pink')}
@@ -1672,7 +1716,7 @@ function helpView(){
 }
 function appInfoView(){
  return `<section class="settings-detail-page">${menuBack('アプリ情報','ABOUT')}
- ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.54.3</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
+ ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.54.4</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
  ${settingsCard('情報','',`<button class="settings-menu-row" onclick="toast('更新履歴は準備中です')"><span><b>更新履歴</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('利用規約は準備中です')"><span><b>利用規約</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('プライバシーポリシーは準備中です')"><span><b>プライバシーポリシー</b></span><em>›</em></button>`)}
  </section>`;
 }
@@ -1738,7 +1782,7 @@ function saveDisplaySettings(){
  toast('表示設定を保存しました');
 }
 function exportTeamData(){
- const data={version:'0.54.3',exportedAt:new Date().toISOString(),localStorage:{}};
+ const data={version:'0.54.4',exportedAt:new Date().toISOString(),localStorage:{}};
  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); if(k&&k.startsWith('teamTheory')) data.localStorage[k]=localStorage.getItem(k)}
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`TEAM_Theory_backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); toast('バックアップを書き出しました');
 }
@@ -1994,7 +2038,7 @@ if ('serviceWorker' in navigator) {
     refreshing = true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=0.54.3', { updateViaCache: 'none' })
+  navigator.serviceWorker.register('./sw.js?v=0.54.4', { updateViaCache: 'none' })
     .then(reg => {
       reg.update().catch(()=>{});
       setInterval(() => reg.update().catch(()=>{}), 60 * 1000);
