@@ -260,7 +260,18 @@ function classifyAliaContext(m){
 
 
 
+function getAliaPrefs(){
+  const p=getUiPrefs();
+  return {
+    level:p.aliaLevel||'標準',
+    detail:p.aliaDetail||'標準',
+    notify:!!p.aliaNotify
+  };
+}
 function aliaTeamLevel(account){
+  const pref=getAliaPrefs().level;
+  if(pref==='やさしい') return {id:'beginner',label:'やさしい'};
+  if(pref==='専門的') return {id:'advanced',label:'専門的'};
   const raw=String(account?.teamLevel||account?.level||'').toLowerCase();
   if(/全国|elite|advanced|強豪/.test(raw)) return {id:'advanced',label:'競技志向'};
   if(/県|intermediate|中級/.test(raw)) return {id:'intermediate',label:'中級'};
@@ -754,7 +765,7 @@ function welcomeView(){
          <p class="alia-tagline">教わるから、考えるへ。</p>
        </div>
      </div>
-     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.55.0" alt="Alia">
+     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.55.1" alt="Alia">
    </div>
    ${savedTeamsView()}
    <div class="welcome-actions">
@@ -763,7 +774,7 @@ function welcomeView(){
    </div>
    <button class="welcome-utility" onclick="showTopSettingsNotice()"><span class="welcome-utility-icon">⚙</span><span>設定・その他</span><span class="welcome-utility-arrow">›</span></button>
    <div class="alia-support">♥ Aliaがチームの成長をサポートするよ！ ♥</div>
-   <div class="welcome-version">Version 0.55.0</div>
+   <div class="welcome-version">Version 0.55.1</div>
  </main>`;
 }
 function savedTeamsView(){
@@ -789,7 +800,7 @@ function createTeamView(){
      <div class="create-field"><label class="create-label"><span class="create-label-icon shield-icon">✦</span><span>役割</span></label><select id="role" class="input create-input create-select">${roleOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🏐</span><span>ポジション</span></label><select id="position" class="input create-input create-select">${positionOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🎓</span><span>学年</span></label><select id="grade" class="input create-input create-select">${gradeOptions()}</select></div>
-     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.55.0" class="create-alia" alt="Alia"></div>
+     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.55.1" class="create-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions create-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon home-svg">⌂</span><span>トップ</span></button><button class="bottom-action primary-action" onclick="createTeamAccount()"><span>チームを作成する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -804,7 +815,7 @@ function joinTeamView(){
      <div class="join-field"><label class="join-label"><span class="join-label-icon shield-icon">★</span><span>参加時の役割</span></label><div class="input join-input join-role-fixed" aria-readonly="true"><span>選手</span><small>固定</small></div><small class="join-help">安全のため参加時は「選手」で登録されます。監督・コーチ・マネージャーへの変更は、参加後に監督が行います。</small></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🏐</span><span>ポジション</span></label><select id="joinPosition" class="input join-input join-select">${positionOptions()}</select></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🎓</span><span>学年</span></label><select id="joinGrade" class="input join-input join-select">${gradeOptions()}</select></div>
-     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.55.0" class="join-alia" alt="Alia"></div>
+     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.55.1" class="join-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions join-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon">⌂</span><span>トップ</span></button><button class="bottom-action join-action" onclick="joinTeamAccount()"><span>参加する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -1157,6 +1168,9 @@ function homeView(){
   const directorIssues=loadDirectorIssuesLocal().filter(directorIssueAppliesToMe);
   const unreadDirector=directorIssues.filter(x=>directorIssueStatus(x)==='未読').length;
   const notices=directorNotificationItems(),unseenNotices=unseenDirectorNotificationItems(),urgent=unseenNotices.filter(x=>x.type==='due'||x.type==='comment').length;
+  const aliaPrefs=getAliaPrefs();
+  const latestReview=currentTeamMeetings().filter(m=>m.status==='closed'&&!m.actionCompleted).sort((a,b)=>(b.closedAt||b.createdAt)-(a.closedAt||a.createdAt))[0];
+  const aliaReflectionBlock=aliaPrefs.notify&&latestReview?`<section class="home-attention alia-reflection"><button onclick="resume('${latestReview.id}')"><span class="attention-icon">✦</span><span><b>Aliaと前回の行動を振り返ろう</b><small>${esc(latestReview.group)}・${esc(latestReview.theme||'テーマ未設定')}</small></span><em>確認 ›</em></button></section>`:'';
   const attentionBlock=notices.length?`<section class="home-attention ${unseenNotices.length?'has-unseen':'is-seen'}"><button onclick="go('notifications')"><span class="attention-icon">${unseenNotices.length?(urgent?'!':'•'):'✓'}</span><span><b>${unseenNotices.length?(urgent?'確認が必要なお知らせがあります':'新しいお知らせがあります'):'確認済みのお知らせがあります'}</b><small>${notices[0]?esc(notices[0].title+'・'+notices[0].text):''}</small></span><em>${unseenNotices.length?unseenNotices.length+'件':'確認済み'} ›</em></button></section>`:'';
   const directorBlock=`<section class="team-home-director"><div class="team-home-section-head"><div><small>DIRECTOR ISSUES</small><h3>監督発議</h3></div><div class="director-head-actions">${unreadDirector?`<span class="director-unread-badge">未読 ${unreadDirector}</span>`:''}${canCreateDirectorIssue()?`<button onclick="go('directorDashboard')">集計 ›</button>`:''}</div></div><button class="team-home-director-card" onclick="go('directorIssues')"><span class="director-home-icon">📣</span><span><b>${directorIssues.length?esc(directorIssues[0].title):'監督からのテーマ'}</b><small>${directorIssues.length?`${directorIssueStatus(directorIssues[0])}・${directorIssues.length}件`:'発議されたテーマを確認・回答します'}</small></span><span>›</span></button></section>`;
   const recentBlock=`<section class="team-home-recent"><div class="team-home-section-head"><div><small>RECENT</small><h3>最近のミーティング</h3></div><button class="team-home-link" onclick="go('meetings')">すべて見る ›</button></div>${recent.length?`<div class="team-home-recent-list">${recent.map(m=>`<button class="team-home-recent-card" onclick="resume('${m.id}')"><span class="team-home-recent-mark">✓</span><span><b>${esc(m.group)}ミーティング</b><small>${esc(m.theme||'テーマ未設定')}・${new Date(m.createdAt).toLocaleDateString('ja-JP')}</small></span><span>›</span></button>`).join('')}</div>`:`<div class="team-home-recent-empty">終了したミーティングはまだありません。</div>`}</section>`;
@@ -1218,7 +1232,7 @@ function roomView(){
  const themePlaceholder = m.type==='grade' ? '例：部活と勉強を両立するには' : m.type==='all' ? '例：次の大会へ向けて改善すること' : '例：ミドルをもっと使うには';
  const categoryLabel = themeCategoryLabel(m.type,m.themeCategory||'');
  return `<section class="meeting-room">
-   <header class="meeting-room-head"><div><small>${esc(typeLabel)}</small><h2>${esc(m.group)}ミーティング</h2></div><span class="meeting-room-mark">✦</span></header>
+   <header class="meeting-room-head"><div><small>${esc(typeLabel)}</small><h2>${esc(m.group)}ミーティング</h2></div></header>
    <div class="room-meta room-meta-modern"><span><b>作成者</b>${esc(m.ownerName)}</span><span><b>ミーティングコード</b>${esc(a.inviteCode||a.teamCode)}</span></div>
    <div class="form-card meeting-form-card"><div class="meeting-form-title"><span>✎</span><div><b>意見を送る</b><small>短くても大丈夫。今感じていることを言葉にしよう。</small></div></div>
      <div class="theme-picker-card">
@@ -1237,15 +1251,23 @@ function roomView(){
    <div class="meeting-bottom-actions"><button class="btn back-action" onclick="state.selectedType=getCurrent()?.type||state.selectedType;state.view='select';render()">‹ 戻る</button><button class="btn secondary" onclick="go('home')">一時保存</button><button class="btn gold alia-summary-action" onclick="openSummary()">✦ Aliaまとめへ</button></div>
  </section>`;
 }
+function applyAliaDetailPreference(sections){
+ const detail=getAliaPrefs().detail;
+ if(detail==='簡潔') return sections.slice(0,1).map(x=>({...x,text:String(x.text||'').split('。')[0]+'。'}));
+ if(detail==='詳しく') return sections.map(x=>({...x,text:`${x.text} 実施後は結果を記録し、次回のミーティングで続ける点と変える点を確認します。`}));
+ return sections;
+}
 function summaryView(){
  const m=getCurrent(); if(!m) return '<div class="empty">ミーティングが見つかりません。</div>';
  const plan=parseActionPlan(m.summary || makeSummary(m),m);
  const aliaContext=classifyAliaContext(m);
- const adviceSections=gradeAwareSections(m,buildAdaptiveAdviceSections(m,plan));
+ const aliaPrefs=getAliaPrefs();
+ const adviceSections=applyAliaDetailPreference(gradeAwareSections(m,buildAdaptiveAdviceSections(m,plan)));
  const methodSections=adviceSections.map(section=>`<div class="method-block adaptive-method-block"><strong>${esc(section.icon)} ${esc(section.label)}</strong><div>${esc(section.text)}</div></div>`).join('');
  const evidenceItems=aliaEvidence(m,aliaContext).map(x=>`<li>${esc(x)}</li>`).join('');
+ const evidenceBlock=aliaPrefs.detail==='簡潔'?'':`<button id="alia-evidence-btn" class="alia-evidence-toggle" onclick="toggleAliaEvidence()">根拠を見る</button><div id="alia-evidence" class="alia-evidence-panel" hidden><strong>提案の考え方</strong><ul>${evidenceItems}</ul><small>安全性と実行しやすさを優先した一般的な知見です。医療・栄養上の個別判断が必要な場合は専門家へ相談してください。</small></div>`;
  const sourceOpinions = m.entries.length ? m.entries.map((e,i)=>`<article class="summary-source-card"><div class="summary-source-number">${i+1}</div><div class="summary-source-body"><div class="summary-source-meta"><strong>${esc(e.name)}</strong><small>${new Date(e.createdAt||Date.now()).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}</small></div><p>${esc(e.text)}</p></div></article>`).join('') : '<div class="meeting-empty dark-empty"><span>♡</span><b>意見はまだありません</b><small>意見を入力すると、発言者と内容がここに残ります。</small></div>';
- return `<section class="summary-page"><h2 class="page-title">ミーティングまとめ</h2><div class="summary-source-section player-opinions-main"><div class="summary-panel-head player-voices-head"><div><small>PLAYER VOICES</small><h3>選手から出た意見</h3></div><span>${m.entries.length}件</span></div><div class="summary-source-list">${sourceOpinions}</div></div><div class="alia-plan-card"><div class="summary-panel-head alia-plan-head"><div><small>ALIA ADVICE</small></div><span class="alia-context-chip">${esc(aliaContext.domainLabel)}・${esc(aliaContext.audience)}・${esc(aliaContext.levelLabel)}</span></div><div class="action-plan-list"><div class="action-plan-card issue"><span class="action-plan-label">課題</span><div class="action-plan-answer">${esc(plan.issue)}</div></div><div class="action-plan-card action"><span class="action-plan-label">行動</span><div class="action-plan-answer">${esc(plan.action)}</div></div><div class="action-plan-card method"><span class="action-plan-label">方法</span><div class="action-plan-answer method-answer">${methodSections}</div></div></div><button id="alia-evidence-btn" class="alia-evidence-toggle" onclick="toggleAliaEvidence()">根拠を見る</button><div id="alia-evidence" class="alia-evidence-panel" hidden><strong>提案の考え方</strong><ul>${evidenceItems}</ul><small>安全性と実行しやすさを優先した一般的な知見です。医療・栄養上の個別判断が必要な場合は専門家へ相談してください。</small></div></div><div class="summary-bottom-actions two-actions"><button class="btn back-action" onclick="state.view='room';render()">‹ 入力へ戻る</button>${canEndMeeting(m)?`<button class="btn gold" onclick="finalize()">確定して保存</button>`:`<button class="btn gold" onclick="go('meetings')">履歴へ戻る</button>`}</div></section>`;
+ return `<section class="summary-page"><h2 class="page-title">ミーティングまとめ</h2><div class="summary-source-section player-opinions-main"><div class="summary-panel-head player-voices-head"><div><small>PLAYER VOICES</small><h3>選手から出た意見</h3></div><span>${m.entries.length}件</span></div><div class="summary-source-list">${sourceOpinions}</div></div><div class="alia-plan-card"><div class="summary-panel-head alia-plan-head"><div><small>ALIA ADVICE</small></div><span class="alia-context-chip">${esc(aliaContext.domainLabel)}・${esc(aliaPrefs.level)}・${esc(aliaPrefs.detail)}</span></div><div class="action-plan-list"><div class="action-plan-card issue"><span class="action-plan-label">課題</span><div class="action-plan-answer">${esc(plan.issue)}</div></div><div class="action-plan-card action"><span class="action-plan-label">行動</span><div class="action-plan-answer">${esc(plan.action)}</div></div><div class="action-plan-card method"><span class="action-plan-label">方法</span><div class="action-plan-answer method-answer">${methodSections}</div></div></div>${evidenceBlock}</div><div class="summary-bottom-actions two-actions"><button class="btn back-action" onclick="state.view='room';render()">‹ 入力へ戻る</button>${canEndMeeting(m)?`<button class="btn gold" onclick="finalize()">確定して保存</button>`:`<button class="btn gold" onclick="go('meetings')">履歴へ戻る</button>`}</div></section>`;
 }
 function historyView(){
  const ms=currentTeamMeetings().sort((a,b)=>b.createdAt-a.createdAt);
@@ -1618,7 +1640,7 @@ async function deleteMember(id){
 function menuView(){
  const a=loadAccount();
  return `<section class="menu-page menu-hub-page">
-   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.55.0" alt="Alia"></div>
+   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.55.1" alt="Alia"></div>
    <div class="menu-hub-grid">
      ${menuHubItem('👥','チーム情報','チーム名・学校名・カテゴリー・レベル',"go('teamInfo')",'pink')}
      ${menuHubItem('👤','マイプロフィール','名前・役割・ポジション・学年',"go('myProfile')",'pink')}
@@ -1693,7 +1715,8 @@ function aliaSettingsView(){
  ${settingsCard('提案スタイル','Alia Adviceの表示方法を調整します。',`
    <label class="settings-field"><span>提案レベル</span><select id="aliaLevel" class="input"><option ${p.aliaLevel==='やさしい'?'selected':''}>やさしい</option><option ${!p.aliaLevel||p.aliaLevel==='標準'?'selected':''}>標準</option><option ${p.aliaLevel==='専門的'?'selected':''}>専門的</option></select></label>
    <label class="settings-field"><span>提案の詳しさ</span><select id="aliaDetail" class="input"><option ${p.aliaDetail==='簡潔'?'selected':''}>簡潔</option><option ${!p.aliaDetail||p.aliaDetail==='標準'?'selected':''}>標準</option><option ${p.aliaDetail==='詳しく'?'selected':''}>詳しく</option></select></label>
-   <label class="settings-toggle-row"><span><b>通知</b><small>Aliaからの振り返り通知</small></span><input id="aliaNotify" type="checkbox" ${p.aliaNotify?'checked':''}></label>
+   <label class="settings-toggle-row"><span><b>通知</b><small>終了したミーティングの振り返りをホームに表示</small></span><input id="aliaNotify" type="checkbox" ${p.aliaNotify?'checked':''}></label>
+   <div class="alia-settings-preview"><small>現在の設定</small><b>${esc(p.aliaLevel||'標準')}・${esc(p.aliaDetail||'標準')}</b><span>${p.aliaNotify?'振り返り通知 ON':'振り返り通知 OFF'}</span></div>
  `)}
  <div class="settings-actions"><button class="btn primary" onclick="saveAliaSettings()">設定を保存</button></div>
  </section>`;
@@ -1716,7 +1739,7 @@ function helpView(){
 }
 function appInfoView(){
  return `<section class="settings-detail-page">${menuBack('アプリ情報','ABOUT')}
- ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.55.0</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
+ ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.55.1</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
  ${settingsCard('情報','',`<button class="settings-menu-row" onclick="toast('更新履歴は準備中です')"><span><b>更新履歴</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('利用規約は準備中です')"><span><b>利用規約</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('プライバシーポリシーは準備中です')"><span><b>プライバシーポリシー</b></span><em>›</em></button>`)}
  </section>`;
 }
@@ -1775,14 +1798,15 @@ async function saveMyProfile(){
 }
 function saveAliaSettings(){
  saveUiPrefs({aliaLevel:document.getElementById('aliaLevel')?.value||'標準',aliaDetail:document.getElementById('aliaDetail')?.value||'標準',aliaNotify:!!document.getElementById('aliaNotify')?.checked});
- toast('Alia設定を保存しました');
+ render();
+ setTimeout(()=>toast('Alia設定を保存しました。次のAliaまとめから反映されます'),0);
 }
 function saveDisplaySettings(){
  saveUiPrefs({fontSize:document.getElementById('displayFont')?.value||'normal',motion:!!document.getElementById('displayMotion')?.checked});
  toast('表示設定を保存しました');
 }
 function exportTeamData(){
- const data={version:'0.55.0',exportedAt:new Date().toISOString(),localStorage:{}};
+ const data={version:'0.55.1',exportedAt:new Date().toISOString(),localStorage:{}};
  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); if(k&&k.startsWith('teamTheory')) data.localStorage[k]=localStorage.getItem(k)}
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`TEAM_Theory_backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); toast('バックアップを書き出しました');
 }
@@ -2038,7 +2062,7 @@ if ('serviceWorker' in navigator) {
     refreshing = true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=0.55.0', { updateViaCache: 'none' })
+  navigator.serviceWorker.register('./sw.js?v=0.55.1', { updateViaCache: 'none' })
     .then(reg => {
       reg.update().catch(()=>{});
       setInterval(() => reg.update().catch(()=>{}), 60 * 1000);

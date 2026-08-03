@@ -1460,3 +1460,11 @@ body.member-modal-open .bottom-nav{visibility:hidden;pointer-events:none}
 @media(max-width:390px){
   .director-form-actions .btn,.director-management-actions .director-manage-button{min-height:48px}
 }
+
+/* v0.55.1: non-interactive decoration removed and Alia settings feedback */
+.alia-settings-preview{margin-top:14px;padding:14px 16px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.04);display:flex;flex-direction:column;gap:4px}
+.alia-settings-preview small{opacity:.7;font-size:11px;letter-spacing:.08em}
+.alia-settings-preview b{font-size:16px}
+.alia-settings-preview span{font-size:12px;opacity:.82}
+.home-attention.alia-reflection{border-color:rgba(244,114,182,.34)}
+.home-attention.alia-reflection .attention-icon{background:rgba(244,114,182,.18)}
