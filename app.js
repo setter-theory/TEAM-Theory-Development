@@ -675,7 +675,7 @@ function welcomeView(){
          <p class="alia-tagline">教わるから、考えるへ。</p>
        </div>
      </div>
-     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.53.0" alt="Alia">
+     <img class="alia-character alia-character-v396" src="./icons/alia-standalone.png?v=0.53.1" alt="Alia">
    </div>
    ${savedTeamsView()}
    <div class="welcome-actions">
@@ -684,7 +684,7 @@ function welcomeView(){
    </div>
    <button class="welcome-utility" onclick="showTopSettingsNotice()"><span class="welcome-utility-icon">⚙</span><span>設定・その他</span><span class="welcome-utility-arrow">›</span></button>
    <div class="alia-support">♥ Aliaがチームの成長をサポートするよ！ ♥</div>
-   <div class="welcome-version">Version 0.53.0</div>
+   <div class="welcome-version">Version 0.53.1</div>
  </main>`;
 }
 function savedTeamsView(){
@@ -710,7 +710,7 @@ function createTeamView(){
      <div class="create-field"><label class="create-label"><span class="create-label-icon shield-icon">✦</span><span>役割</span></label><select id="role" class="input create-input create-select">${roleOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🏐</span><span>ポジション</span></label><select id="position" class="input create-input create-select">${positionOptions()}</select></div>
      <div class="create-field"><label class="create-label"><span class="create-label-icon">🎓</span><span>学年</span></label><select id="grade" class="input create-input create-select">${gradeOptions()}</select></div>
-     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.53.0" class="create-alia" alt="Alia"></div>
+     <div class="create-alia-zone"><div class="create-alia-bubble">チーム名は<br>後から変更できるよ♪</div><img src="./icons/alia-standalone.png?v=0.53.1" class="create-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions create-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon home-svg">⌂</span><span>トップ</span></button><button class="bottom-action primary-action" onclick="createTeamAccount()"><span>チームを作成する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -725,7 +725,7 @@ function joinTeamView(){
      <div class="join-field"><label class="join-label"><span class="join-label-icon shield-icon">★</span><span>参加時の役割</span></label><div class="input join-input join-role-fixed" aria-readonly="true"><span>選手</span><small>固定</small></div><small class="join-help">安全のため参加時は「選手」で登録されます。監督・コーチ・マネージャーへの変更は、参加後に監督が行います。</small></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🏐</span><span>ポジション</span></label><select id="joinPosition" class="input join-input join-select">${positionOptions()}</select></div>
      <div class="join-field"><label class="join-label"><span class="join-label-icon">🎓</span><span>学年</span></label><select id="joinGrade" class="input join-input join-select">${gradeOptions()}</select></div>
-     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.53.0" class="join-alia" alt="Alia"></div>
+     <div class="join-alia-zone"><div class="join-alia-bubble">招待コードは<br>大文字・小文字を<br>気にしなくて<br>大丈夫だよ♪</div><img src="./icons/alia-standalone.png?v=0.53.1" class="join-alia" alt="Alia"></div>
    </section>
    <div class="onboarding-bottom-actions join-bottom-actions"><button class="bottom-action secondary-action" onclick="go('welcome')"><span class="bottom-action-icon">⌂</span><span>トップ</span></button><button class="bottom-action join-action" onclick="joinTeamAccount()"><span>参加する</span><span class="bottom-action-arrow">›</span></button></div>
  </main>`;
@@ -876,6 +876,25 @@ function directorNotificationItems(){
  return items.sort((a,b)=>a.priority-b.priority||b.time-a.time);
 }
 function notificationIcon(type){return ({new:'📣',due:'⏰',comment:'💬',progress:'📊'})[type]||'•'}
+function directorNotificationSeenKey(){
+ const a=loadAccount();
+ return `tt_notification_seen_${a?.teamId||'none'}_${a?.displayName||'user'}`;
+}
+function directorNotificationItemKey(item){
+ return [item.type,item.issueId,item.title,item.text].join('|');
+}
+function loadDirectorNotificationSeen(){return read(directorNotificationSeenKey(),{})||{}}
+function unseenDirectorNotificationItems(){
+ const seen=loadDirectorNotificationSeen();
+ return directorNotificationItems().filter(item=>!seen[directorNotificationItemKey(item)]);
+}
+function markDirectorNotificationsSeen(issueId=null){
+ const seen=loadDirectorNotificationSeen(),now=Date.now();
+ directorNotificationItems().forEach(item=>{
+  if(!issueId||item.issueId===issueId) seen[directorNotificationItemKey(item)]=now;
+ });
+ write(directorNotificationSeenKey(),seen);
+}
 function notificationCenterView(){
  const items=directorNotificationItems(),filter=state.notificationFilter||'all';
  const filtered=filter==='all'?items:items.filter(x=>x.type===filter);
@@ -963,6 +982,7 @@ async function createDirectorIssue(){
  catch(error){console.error('createDirectorIssue failed',error);toast(cloudErrorMessage(error));}finally{setActionBusy(button,false)}
 }
 async function openDirectorIssue(id){
+ markDirectorNotificationsSeen(id);
  state.directorIssueId=id;state.view='directorIssueDetail';render();
  const issue=loadDirectorIssuesLocal().find(x=>x.id===id),a=loadAccount(),c=cloudClient();
  if(!issue||!a?.cloud||!c||issue.status!=='open')return;
@@ -1014,12 +1034,12 @@ function homeView(){
   const activeBlock=active?`<section class="team-home-active"><div class="team-home-section-head"><div><small>IN PROGRESS</small><h3>進行中のミーティング</h3></div><span class="pill">進行中</span></div><div class="team-home-progress"><div class="team-home-progress-meta"><span>${esc(TYPES[active.type]?.label||'ミーティング')}</span><span>${esc(active.group)}</span></div><h3>${esc(active.theme||'テーマ未設定')}</h3><div class="team-home-live-stats"><div><small>参加人数</small><b>${Math.max(1,new Set(active.entries.map(e=>e.name).filter(Boolean)).size)}人</b></div><div><small>開始時刻</small><b>${new Date(active.createdAt||Date.now()).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}</b></div><div><small>経過時間</small><b>${elapsedText(active.createdAt)}</b></div></div><button class="btn primary team-home-continue" onclick="resume('${active.id}')">続きから <span>›</span></button></div></section>`:`<section class="team-home-active"><div class="team-home-section-head"><div><small>IN PROGRESS</small><h3>進行中のミーティング</h3></div></div><div class="team-home-empty"><span>✓</span><div><b>現在進行中のミーティングはありません</b><small>下の3つから新しい話し合いを始められます。</small></div></div></section>`;
   const directorIssues=loadDirectorIssuesLocal().filter(directorIssueAppliesToMe);
   const unreadDirector=directorIssues.filter(x=>directorIssueStatus(x)==='未読').length;
-  const notices=directorNotificationItems(),urgent=notices.filter(x=>x.type==='due'||x.type==='comment').length;
-  const attentionBlock=notices.length?`<section class="home-attention"><button onclick="go('notifications')"><span class="attention-icon">${urgent?'!':'•'}</span><span><b>${urgent?'確認が必要なお知らせがあります':'新しいお知らせがあります'}</b><small>${notices[0]?esc(notices[0].title+'・'+notices[0].text):''}</small></span><em>${notices.length}件 ›</em></button></section>`:'';
+  const notices=directorNotificationItems(),unseenNotices=unseenDirectorNotificationItems(),urgent=unseenNotices.filter(x=>x.type==='due'||x.type==='comment').length;
+  const attentionBlock=notices.length?`<section class="home-attention ${unseenNotices.length?'has-unseen':'is-seen'}"><button onclick="go('notifications')"><span class="attention-icon">${unseenNotices.length?(urgent?'!':'•'):'✓'}</span><span><b>${unseenNotices.length?(urgent?'確認が必要なお知らせがあります':'新しいお知らせがあります'):'確認済みのお知らせがあります'}</b><small>${notices[0]?esc(notices[0].title+'・'+notices[0].text):''}</small></span><em>${unseenNotices.length?unseenNotices.length+'件':'確認済み'} ›</em></button></section>`:'';
   const directorBlock=`<section class="team-home-director"><div class="team-home-section-head"><div><small>DIRECTOR ISSUES</small><h3>監督発議</h3></div><div class="director-head-actions">${unreadDirector?`<span class="director-unread-badge">未読 ${unreadDirector}</span>`:''}${canCreateDirectorIssue()?`<button onclick="go('directorDashboard')">集計 ›</button>`:''}</div></div><button class="team-home-director-card" onclick="go('directorIssues')"><span class="director-home-icon">📣</span><span><b>${directorIssues.length?esc(directorIssues[0].title):'監督からのテーマ'}</b><small>${directorIssues.length?`${directorIssueStatus(directorIssues[0])}・${directorIssues.length}件`:'発議されたテーマを確認・回答します'}</small></span><span>›</span></button></section>`;
   const recentBlock=`<section class="team-home-recent"><div class="team-home-section-head"><div><small>RECENT</small><h3>最近のミーティング</h3></div><button class="team-home-link" onclick="go('meetings')">すべて見る ›</button></div>${recent.length?`<div class="team-home-recent-list">${recent.map(m=>`<button class="team-home-recent-card" onclick="resume('${m.id}')"><span class="team-home-recent-mark">✓</span><span><b>${esc(m.group)}ミーティング</b><small>${esc(m.theme||'テーマ未設定')}・${new Date(m.createdAt).toLocaleDateString('ja-JP')}</small></span><span>›</span></button>`).join('')}</div>`:`<div class="team-home-recent-empty">終了したミーティングはまだありません。</div>`}</section>`;
   return `<section class="team-home-dashboard">
-    <header class="team-home-header"><div><small>TEAM HOME</small><h2>${esc(a.teamName)}</h2><p>${today}</p></div><div class="team-home-header-actions"><button class="home-notification-button" onclick="go('notifications')" aria-label="お知らせを開く"><span>♢</span>${notices.length?`<b>${notices.length}</b>`:''}</button><button class="team-home-members" onclick="go('members')" aria-label="参加メンバー一覧を開く"><span class="team-home-members-icon">♟</span><span class="team-home-members-count">${memberCount}人</span><span class="team-home-members-arrow">›</span></button></div></header>
+    <header class="team-home-header"><div><small>TEAM HOME</small><h2>${esc(a.teamName)}</h2><p>${today}</p></div><div class="team-home-header-actions"><button class="home-notification-button" onclick="go('notifications')" aria-label="お知らせを開く"><span>♢</span>${unseenNotices.length?`<b>${unseenNotices.length}</b>`:''}</button><button class="team-home-members" onclick="go('members')" aria-label="参加メンバー一覧を開く"><span class="team-home-members-icon">♟</span><span class="team-home-members-count">${memberCount}人</span><span class="team-home-members-arrow">›</span></button></div></header>
     ${attentionBlock}
     ${directorBlock}
     ${activeBlock}
@@ -1448,7 +1468,7 @@ async function deleteMember(id){
 function menuView(){
  const a=loadAccount();
  return `<section class="menu-page menu-hub-page">
-   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.53.0" alt="Alia"></div>
+   <div class="menu-page-head menu-hub-head"><div><small>TEAM MENU</small><h2>メニュー</h2><p>${esc(a.teamName)}の情報・設定を選びます。</p></div><img src="./icons/alia-standalone.png?v=0.53.1" alt="Alia"></div>
    <div class="menu-hub-grid">
      ${menuHubItem('👥','チーム情報','チーム名・学校名・カテゴリー・レベル',"go('teamInfo')",'pink')}
      ${menuHubItem('👤','マイプロフィール','名前・役割・ポジション・学年',"go('myProfile')",'pink')}
@@ -1546,7 +1566,7 @@ function helpView(){
 }
 function appInfoView(){
  return `<section class="settings-detail-page">${menuBack('アプリ情報','ABOUT')}
- ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.53.0</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
+ ${settingsCard('TEAM Theory','教わるから、考えるへ。',`<div class="app-info-version"><small>VERSION</small><b>0.53.1</b></div><p class="app-info-copy">選手の意見を主役に、チームの話し合いと成長を支えるアプリです。</p><div class="cloud-foundation-status"><b>学校アカウント基盤</b><span>${cloudConfigured()?'クラウド接続済み':'Supabaseキー設定待ち'}</span></div>`)}
  ${settingsCard('情報','',`<button class="settings-menu-row" onclick="toast('更新履歴は準備中です')"><span><b>更新履歴</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('利用規約は準備中です')"><span><b>利用規約</b></span><em>›</em></button><button class="settings-menu-row" onclick="toast('プライバシーポリシーは準備中です')"><span><b>プライバシーポリシー</b></span><em>›</em></button>`)}
  </section>`;
 }
@@ -1612,7 +1632,7 @@ function saveDisplaySettings(){
  toast('表示設定を保存しました');
 }
 function exportTeamData(){
- const data={version:'0.53.0',exportedAt:new Date().toISOString(),localStorage:{}};
+ const data={version:'0.53.1',exportedAt:new Date().toISOString(),localStorage:{}};
  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); if(k&&k.startsWith('teamTheory')) data.localStorage[k]=localStorage.getItem(k)}
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`TEAM_Theory_backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); toast('バックアップを書き出しました');
 }
@@ -1843,7 +1863,7 @@ function switchTeam(teamId){
  state.selectedType=null; state.selectedGroup=null; state.currentMeetingId=null; state.view='home'; render();
 }
 function goTop(){ state.selectedType=null; state.selectedGroup=null; state.currentMeetingId=null; state.view='welcome'; render(); }
-function go(v){state.view=v;render()}
+function go(v){if(v==='notifications')markDirectorNotificationsSeen();state.view=v;render()}
 function resetAll(){
  const active=loadAccount();
  if(!active) return goTop();
@@ -1868,7 +1888,7 @@ if ('serviceWorker' in navigator) {
     refreshing = true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=0.53.0', { updateViaCache: 'none' })
+  navigator.serviceWorker.register('./sw.js?v=0.53.1', { updateViaCache: 'none' })
     .then(reg => {
       reg.update().catch(()=>{});
       setInterval(() => reg.update().catch(()=>{}), 60 * 1000);
