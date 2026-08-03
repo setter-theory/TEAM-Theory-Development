@@ -1383,3 +1383,8 @@ body.member-modal-open .bottom-nav{visibility:hidden;pointer-events:none}
   font-weight:800;
   letter-spacing:.08em;
 }
+
+/* v0.51.3 自分のプロフィール編集 */
+.member-readonly-field{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;background:rgba(255,255,255,.08);color:#fff;cursor:default}
+.member-readonly-field small{font-size:10px;color:#f6a3be;font-weight:700;white-space:nowrap}
+.member-self-edit-note{margin:-2px 0 10px;padding:9px 10px;border:1px solid rgba(244,117,157,.28);border-radius:10px;background:rgba(244,117,157,.08);font-size:11px;line-height:1.55;color:#cbd3e3}
